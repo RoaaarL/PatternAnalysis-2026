@@ -1,9 +1,11 @@
-"""Read one training pair; run from the guided repository root."""
+"""Read and preview one training pair; run from the guided repository root."""
 
 from pathlib import Path
 
 import nibabel as nib
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 data_root = Path(
     "../../Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data"
@@ -17,3 +19,22 @@ mask = nib.load(mask_path).get_fdata()
 print("MRI shape:", image.shape)
 print("Mask shape:", mask.shape)
 print("Mask labels:", np.unique(mask))
+
+# These four display colors cover the labels observed in this fixed slice.
+mask_colors = ListedColormap(["black", "gold", "deepskyblue", "magenta"])
+fig, axes = plt.subplots(1, 2, figsize=(8, 6), layout="constrained")
+axes[0].imshow(image, cmap="gray", origin="upper", interpolation="nearest")
+axes[0].set_title("Training MRI")
+mask_plot = axes[1].imshow(
+    mask, cmap=mask_colors, vmin=-0.5, vmax=3.5,
+    origin="upper", interpolation="nearest"
+)
+axes[1].set_title("Reference mask")
+fig.colorbar(mask_plot, ax=axes[1], ticks=[0, 1, 2, 3], label="Class ID")
+fig.suptitle("Training pair: case 004 | week 0 | slice 12")
+
+output_path = Path("outputs/training_pair_case_004_week_0_slice_12.png")
+output_path.parent.mkdir(parents=True, exist_ok=True)
+fig.savefig(output_path, dpi=150)
+plt.close(fig)
+print("Preview saved:", output_path.resolve())
