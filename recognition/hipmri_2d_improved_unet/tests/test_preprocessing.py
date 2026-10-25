@@ -2,7 +2,6 @@
 
 from pathlib import Path
 import sys
-from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -153,8 +152,8 @@ class PreprocessingChecks(unittest.TestCase):
                 image = np.arange(6, dtype=np.float64).reshape(2, 3)
                 target = np.zeros((2, 3), dtype=np.float64)
                 target[0, 0] = bad_value
-                fake_image = SimpleNamespace(get_fdata=lambda: image)
-                fake_target = SimpleNamespace(get_fdata=lambda: target)
+                fake_image = nib.Nifti1Image(image, np.eye(4))
+                fake_target = nib.Nifti1Image(target, np.eye(4))
                 with patch("dataset.nib.load", side_effect=[fake_image, fake_target]):
                     with self.assertRaises(ValueError):
                         load_pair(Path("case_constructed.nii.gz"), Path("seg_constructed.nii.gz"))

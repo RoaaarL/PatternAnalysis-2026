@@ -11,6 +11,10 @@ from torch.utils.data import Dataset
 
 IGNORE_INDEX = -100
 DEFAULT_MULTIPLE = 16
+# Absolute tolerance in the affine's declared coordinate units, not assumed mm.
+# No relative tolerance: a large origin must not hide a translation mismatch.
+AFFINE_ATOL = 1e-5
+AFFINE_RTOL = 0.0
 
 
 def minmax_normalize(values):
@@ -95,12 +99,38 @@ def valid_pixels(prediction, target, valid_mask):
     return prediction[valid_mask], target[valid_mask]
 
 
-def load_pair(image_path, mask_path, multiple=DEFAULT_MULTIPLE):
-    """Read an already-paired MRI/mask and return a preprocessed sample dictionary."""
-    image = nib.load(image_path).get_fdata()
-    mask = nib.load(mask_path).get_fdata()
-    if image.ndim != 2 or image.shape != mask.shape:
+def validate_pair_geometry(image_nifti, mask_nifti):
+    """Check selected NIfTI affines and header shapes before reading voxel arrays.
+
+    Matching matrices are a consistency check, not independent evidence of
+    anatomical alignment, valid source geometry, or physical units.
+    Return the maximum absolute elementwise affine difference for auditing.
+    """
+    if (len(image_nifti.shape) != 2 or image_nifti.shape != mask_nifti.shape
+            or min(image_nifti.shape) <= 0):
         raise ValueError("Expected matching 2D MRI and mask shapes.")
+    affines = []
+    for name, nifti in (("MRI", image_nifti), ("Mask", mask_nifti)):
+        affine = np.asarray(nifti.affine, dtype=np.float64)
+        if affine.shape != (4, 4) or not np.isfinite(affine).all():
+            raise ValueError(f"{name} affine must be a finite 4x4 matrix.")
+        affines.append(affine)
+    difference = float(np.max(np.abs(affines[0] - affines[1])))
+    if not np.allclose(affines[0], affines[1], atol=AFFINE_ATOL, rtol=AFFINE_RTOL):
+        raise ValueError(
+            f"MRI/mask affine mismatch: max absolute difference={difference:.9g}; "
+            f"atol={AFFINE_ATOL}, rtol={AFFINE_RTOL}. Verify source geometry."
+        )
+    return difference
+
+
+def load_pair(image_path, mask_path, multiple=DEFAULT_MULTIPLE):
+    """Check paired header geometry, then read arrays and preprocess the sample."""
+    image_nifti = nib.load(image_path)
+    mask_nifti = nib.load(mask_path)
+    validate_pair_geometry(image_nifti, mask_nifti)
+    image = image_nifti.get_fdata()
+    mask = mask_nifti.get_fdata()
     if not np.isfinite(mask).all() or not np.equal(mask, np.floor(mask)).all():
         raise ValueError("Mask values must be finite integers before casting.")
     if (mask < 0).any():

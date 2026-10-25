@@ -40,6 +40,8 @@
 
 ## Artificial Intelligence Usage Disclosure
 
+<span style="color: purple;">正式实验前修复与核查：Codex按用户后续审查要求添加像素读取前的shape／Affine检查、针对性检查及训练／验证全量头信息补充审计；核实CSIRO原始标签说明，并明确课程2D派生保留ID尚未独立确认。只读比较新旧源码，重新检查固定训练图及现有smoke权重的输入／恢复链路，准备正式实验方案。未新增真实MRI训练，未读取测试目录、文件名或像素；本轮用户整体核查和正式训练确认均保持待完成。</span>
+
 **工具：** OpenAI Codex，包括用于只读任务书核对的辅助代理。
 
 **本轮具体协助：** 核对任务书第6、14、15、16页的相关要求，核实本地路径、训练文件存在性及可复用运行环境，创建独立仓库、README 和忽略规则，执行初始 Git 提交，并提供第一小步的文件定位讲解。<span style="color: purple;">随后按用户授权运行文件定位命令；本次审阅目录中已有的未提交读取草稿、补充 mask 标签输出、运行固定训练样本并讲解代码，执行本步骤的真实提交。</span> <span style="color: purple;">本步进一步添加并运行同一训练样本的 Matplotlib 并排预览，检查生成图像，记录用户已答对的类别编号问题；未创建后续模型或训练代码。</span> <span style="color: purple;">随后添加同一训练样本的 CPU tensor 转换、mask 转整数前的值检查及形状／类型输出；由 Codex 运行并核验有限值和 mask 逐点数值保留，未代替用户回答理解问题。</span> <span style="color: purple;">本步添加逐片 min-max 归一化小函数，仅用于 MRI tensor；Codex 运行固定训练样本，并额外用构造的常量与 NaN 输入核查边界，记录为代码检查而非 MRI 实验结果。</span> <span style="color: purple;">随后仅添加单样本的 batch 轴及形状输出，由 Codex 核查取出样本后的数值／类型／设备保持，未实现 DataLoader 或训练。</span> <span style="color: purple;">本步将已实现的归一化函数原样移动到新 dataset.py，检查脚本改为导入；Codex 核验本地模块路径、导入行为以及整理前后实际输出和 tensor 一致。</span>
@@ -369,3 +371,104 @@ $env:MPLBACKEND = 'Agg'
 <span style="color: purple;">evidence/improved_smoke.json保存各轮结果、预运行计划关联、源文件与权重摘要、检查和外观核查；improved_reference.json保存固定训练图推理；improved_training_curves.png为聚合曲线；baseline_regression.json记录保留行为的验证。旧baseline及预处理证据原样保留，权重、MRI、逐像素预测不纳入Git。</span>
 
 <span style="color: purple;">已有16次真实提交不改写，本组完成后增加一次实际里程碑提交，实际hash／时间／操作者以git log为准。未修改旧项目、旧PR或远程仓库。用户尚未确认理解整组Improved代码，实际tutor check-off与originality hurdle状态不因自动执行而改变；也不能声称旧测试结果此前从未被接触。</span>
+
+## <span style="color: purple;">正式实验前：空间检查修复、标签来源与整体核查（2026-10-25）</span>
+
+<span style="color: purple;">本轮从719b02616db73d9f14d78ae28a1e6a5c95ceda87开始。用户要求先补空间检查、核实标签来源，再核查整体流程；明确确认后才正式全量训练。以下是本次新检查，不回写成此前smoke已经检查过的内容。原预处理、baseline及Improved smoke证据保留。</span>
+
+### <span style="color: purple;">实际问题、修复与补充审计</span>
+
+<span style="color: purple;">此前load_pair直接取get_fdata数组，只检查二维shape；同shape不保证空间信息一致。新增validate_pair_geometry先保留两个NIfTI对象，检查非空二维shape匹配、两侧选出的.affine为有限4×4矩阵，再用绝对atol=1e-5、rtol=0比较。相对容差设0，避免很大的坐标原点掩盖平移差异；容差以Affine自身坐标单位计，不擅自解释为毫米或临床距离。异常在读取像素数组前报错，不自动对齐、重采样或修改mask。</span>
+
+<span style="color: purple;">新增6项构造检查：正常匹配；同8×4 shape但mask平移100时拒绝；两侧NaN／±Inf拒绝；绝对容差内外边界；大原点下仍拒绝0.1差异；shape不同拒绝。错误几何检查时阻断get_fdata，确认先检查头信息。原mask数值测试由缺少头信息的SimpleNamespace改为真实Nifti1Image，保留非法mask应拒绝的断言。完整53项检查通过、0跳过，均由Codex执行。</span>
+
+<span style="color: purple;">新增audit_geometry.py只检查训练／验证NIfTI头信息，没有materialize像素数组。实际训练11460／11460、验证660／660对全部通过，错误0，最大Affine差异0，用时24.482秒；31／4个case代理组交集为空。所有12120对都是identity Affine、qform_code=0／sform_code=2、声明空间单位unknown。它证明当前导出头信息一致，不能恢复原始3D物理坐标，也不能独立证明解剖对齐、单位真实性或医学标注正确；检查的是NiBabel选出的.affine，不是完整qform／sform来源审查。</span>
+
+<span style="color: purple;">evidence/geometry_audit.json保存本次范围、时间、矩阵／单位统计、源码hash及检查结果。最大差异统计通过的pair；本次全部通过，因此覆盖全量。旧preprocessing_audit.json没有被改成已检查Affine；未来预处理审计经修复后的load_pair也会先执行该检查。</span>
+
+### <span style="color: purple;">标签ID：原始来源已确认，派生保留ID仍是假设</span>
+
+<span style="color: purple;">2026-10-25实际核实了CSIRO <a href="https://doi.org/10.25919/45t8-p065">数据集DOI</a>、<a href="https://data.csiro.au/dap/ws/v2/collections/52549">version 2 collection API</a>及<a href="https://data.csiro.au/dap/ws/v2/collections/52549/support/5034">BriefDataDescription.txt</a>。支持文件HTTP 200、695 bytes，SHA256为dc3a99204684ced859872d79a75707af3c0ad31d00f5f3213063ce5e30727ee6，与本地来源备份字节一致。原始说明明确给出下表，不由颜色或模型表现猜测。</span>
+
+<table style="color: purple;">
+<tr><th>原始ID</th><th>提供方名称</th><th>中文工作名称</th></tr>
+<tr><td>0</td><td>Background</td><td>背景</td></tr>
+<tr><td>1</td><td>Body</td><td>身体区域</td></tr>
+<tr><td>2</td><td>Bones</td><td>骨骼</td></tr>
+<tr><td>3</td><td>Bladder</td><td>膀胱</td></tr>
+<tr><td>4</td><td>Rectum</td><td>直肠</td></tr>
+<tr><td>5</td><td>Prostate</td><td>前列腺，拟定主要目标</td></tr>
+</table>
+
+<span style="color: purple;">课程任务书v2.5第17页把keras_slices_data列为同一HipMRI_Study_open的2D数据，旁列3D MRI／labels与器官名；本地download_HipMRI_2D.cmd第21行只是从课程目录scp复制，没有本地重编码步骤。但脚本不证明成功传输／完整性；已检查材料未提供3D→2D导出代码、发布者未重编码声明或逐文件原体数据对照。标签集合0…5本身不能证明未重编码。</span>
+
+<span style="color: purple;">新增label_schema.json区分source_raw_mapping_verified=true与derivative_no_remap_verified=false，保持六类和原mask数值。ID5是有原始来源依据的工作目标；解释为当前派生数据的前列腺仍依赖“导出保留原ID”假设。后续用户确认表示知情接受工作假设，不会把假设变成来源证明。旧图继续保留数字ID，应用组织名称时应同时保留该边界。</span>
+
+### <span style="color: purple;">用固定训练MRI核查整条流程</span>
+
+<span style="color: purple;">新增review_pipeline.py只读取固定训练对及本独立仓库现存smoke checkpoint，不创建优化器、不训练。实际报告为evidence/pipeline_review.json。Dataset在该脚本中只有一对，用于核查，不是新的正式训练清单。</span>
+
+<table style="color: purple;">
+<tr><th>环节</th><th>固定样本的实际结果／代码含义</th></tr>
+<tr><td>1 配对及空间信息</td><td>case_004_week_0_slice_12与seg_004_week_0_slice_12；均256×128，Affine差0、单位unknown。文件名、shape和Affine分别检查。</td></tr>
+<tr><td>2 归一化</td><td>MRI原范围0…438，整片min-max后0…1；mask编号不归一化、不改写。</td></tr>
+<tr><td>3 补边与有效区域</td><td>256和128均能整除16，当前padding为0；32768个原始像素全部valid，包括ID0。记录original_size用于裁回。</td></tr>
+<tr><td>4 Dataset与batch</td><td>Dataset按编号调用load_pair，DataLoader经collate_padded组成image [1,1,256,128]、target [1,256,128]。</td></tr>
+<tr><td>5 六类logits</td><td>baseline或Improved均输出[1,6,256,128]；6通道是每个像素的类别分数，类别编号没有亮度倍数关系。</td></tr>
+<tr><td>6 One-hot CE与更新</td><td>one-hot同为[1,6,256,128]；真实(row100,col84)标注ID3编码[0,0,0,1,0,0]。CE只对valid像素平均。训练执行zero_grad→forward→loss.backward→Adam.step更新权重，不更新mask；本次review未执行更新，行为由构造测试和原smoke验证。</td></tr>
+<tr><td>7 验证与推理</td><td>eval关闭dropout，关闭梯度，不调用backward或optimizer.step；本次两模型state保持不变，logits requires_grad=false。正式验证将遍历全660切片。</td></tr>
+<tr><td>8 指标</td><td>先累计整个split有效像素confusion，再算每类Dice=2TP/(2TP+FP+FN)和IoU；不是batch Dice平均，也不是case等权均值。</td></tr>
+<tr><td>9 保存／选择／恢复</td><td>原smoke按最小全验证CE选第2轮，checkpoint记录model与配置；factory恢复。新几何检查下baseline参考CE仍0.8774915934，Improved仍0.2497540712，与smoke对应值一致。</td></tr>
+<tr><td>10 裁回预测</td><td>对6通道取argmax得类别编号图，按original_size裁回256×128；参考mask逐点编号保持。含MRI预测图仍在忽略的outputs/。</td></tr>
+</table>
+
+<span style="color: purple;">本片target中ID0…5像素数依次为[2890,25038,3528,1312,0,0]，没有ID4／5。Improved训练参考macro Dice=0.800043，只平均当前有定义的ID1／2／3；ID4／5因预测和target均缺失返回null。这不能证明目标ID5达标，也不是全验证结果；此前全验证smoke的ID5 Dice仍为0。训练参考、验证集、目标器官与类别macro必须区分。</span>
+
+### <span style="color: purple;">与旧项目的实际差异</span>
+
+<span style="color: purple;">按本轮要求只读比较旧源码，没有复制实现、加载旧权重或读取旧结果／测试文件。旧项目HEAD仍82c794f55bb935cc40f92de990bfcd9165b2361d且工作树干净。以下描述源码差异，不是追加实验。</span>
+
+<table style="color: purple;">
+<tr><th>部分</th><th>旧实现</th><th>当前重建</th></tr>
+<tr><td>预处理</td><td>正强度p1–p99裁剪缩放；中心补至256×144；float16量化；训练gamma／强度增强</td><td>整片min-max；下／右16倍数及动态batch补边；float32；无增强；本轮才补Affine检查</td></tr>
+<tr><td>Loss</td><td>CE＋ID1–5 soft Dice</td><td>共享有效区域one-hot CE</td></tr>
+<tr><td>Baseline</td><td>同类五尺度U-Net、1940902参数；显式He／Xavier初始化、内部pad／crop</td><td>1940902参数；PyTorch默认初始化、外部保证16倍数</td></tr>
+<tr><td>Improved</td><td>特殊首context／decoder投影、postnorm局部块、普通Dropout；分类头在通道减半前；3206562参数</td><td>统一preactivation模块、Dropout2d；分类头在减半后；3190194参数</td></tr>
+<tr><td>主要指标／选模</td><td>volume Dice先按case平均、再case等权的ID5 Dice；按其选best</td><td>全split像素pool Dice／IoU，另报排除ID0的类别macro；按最小验证CE选best</td></tr>
+<tr><td>训练控制</td><td>AdamW、AMP、梯度裁剪、ReduceLROnPlateau、early stopping</td><td>Adam、FP32、固定轮数，无这些附加控制</td></tr>
+</table>
+
+<span style="color: purple;">旧0.8316／0.8233不能充当新结果，也不能直接与当前macro Dice比较；模型、输入、loss、预算、选模与聚合口径均不同。本轮没有为了得到旧分数而改mask、读取测试或调参。</span>
+
+### <span style="color: purple;">正式公平实验方案：等待明确确认</span>
+
+<span style="color: purple;">完整方案为evidence/formal_experiment_proposal.json，状态awaiting_user_confirmation、executed=false；当前train CLI不读取该JSON，它是可审阅方案，不是已经执行的配置。</span>
+
+<table style="color: purple;">
+<tr><th>控制项</th><th>拟定规则，两模型共用</th></tr>
+<tr><td>样本／输入</td><td>全部11460训练／660验证切片；31／4个case代理组；相同清单摘要、min-max、16倍数下右补边、动态batch及valid区域规则</td></tr>
+<tr><td>优化</td><td>base16、六类；seed3710、batch4、FP32、Adam lr0.001／weight_decay0、one-hot CE；无增强、AMP或scheduler</td></tr>
+<tr><td>预算／停止</td><td>每模型20个完整epoch，每轮2865次更新，共57300次；不按验证追加、不early-stop。非有限／错误／OOM则停、保存证据并标incomplete；不能只改一方设置或声称公平比较完成</td></tr>
+<tr><td>主要指标</td><td>全验证像素pool的ID5 Dice；仅在派生保留ID假设下称前列腺Dice。另报六类Dice／IoU、macro和CE；不与旧case-balanced口径混用</td></tr>
+<tr><td>选模</td><td>沿用最小全验证CE；并列最早轮。主报告ID5与选模CE分开，不事后挑分数更好的轮次</td></tr>
+<tr><td>显存</td><td>确认后、正式运行前补并检查分阶段记录：training／validation／checkpoint恢复分别CUDA同步及重置峰值，报告驻留模型／优化器。旧smoke峰值包含恢复，保留原范围</td></tr>
+<tr><td>独立推理</td><td>固定合成输入，batch1／4及256×128／256×144、FP32；warmup10后50次同步计时，报median／p95；排除加载、I/O、传输、指标与绘图，无优化器驻留</td></tr>
+</table>
+
+<span style="color: purple;">20轮是拟定预算，不保证达标。若需改方案，应在运行前明确并共同应用；未达也如实记录。两模型用训练／验证选定并冻结后，才另行明确后续评估边界；用户和Codex已接触旧测试结果，不能称测试集从未见过或据其调参。本次没有测试评估或PR发布授权。</span>
+
+### <span style="color: purple;">用户核查状态、复现与提交</span>
+
+<span style="color: purple;">53项检查、头信息审计、来源核实与固定图恢复均由Codex完成。用户尚未核对本轮整体流程、回答关键核查或确认正式方案，不能将执行委托写成理解通过。待用户核查：本片没有ID5时macro≈0.8000能否说明前列腺效果；验证为何不能执行backward／optimizer.step。正式训练需明确确认方案及派生ID工作假设；未回复不构成同意。tutor check-off／originality hurdle状态不因自动检查改变。</span>
+
+<span style="color: purple;">以下命令仅检查／头信息审计／既有权重推理，不进行正式训练；输出须用新路径。命令块保持可执行，新增由Git diff显示。</span>
+
+```powershell
+$python = '..\..\recognition\hipmri_2d_improved_unet\.venv\Scripts\python.exe'
+$env:PYTHONDONTWRITEBYTECODE = '1'
+& $python -B -m unittest discover -s recognition/hipmri_2d_improved_unet/tests -v
+& $python -B recognition/hipmri_2d_improved_unet/audit_geometry.py --output outputs/geometry_audit_reproduce.json
+& $python -B recognition/hipmri_2d_improved_unet/review_pipeline.py --device cuda --output outputs/pipeline_review_reproduce.json
+```
+
+<span style="color: purple;">已有17次提交保持；修复、来源配置、核查脚本、检查、证据与待确认方案按本轮实际进度提交一次，真实hash／日期／操作者以git log为准。权重、MRI和含MRI预测图仍在忽略的outputs/；旧项目／PR未修改，新仓库仅本地保存，不倒签或覆盖历史。本轮在整体核查与方案确认处停止，不启动正式全量训练。</span>
