@@ -5,6 +5,7 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
@@ -25,7 +26,13 @@ print("Mask labels:", np.unique(mask))
 
 training_dataset = HipMRIPairDataset([(image_path, mask_path)])
 print("Dataset samples:", len(training_dataset))
-normalized_image, mask_tensor = training_dataset[0]
+training_loader = DataLoader(
+    training_dataset, batch_size=1, shuffle=False, num_workers=0
+)
+print("DataLoader batches:", len(training_loader))
+image_batch, mask_batch = next(iter(training_loader))
+normalized_image = image_batch[0]
+mask_tensor = mask_batch[0]
 
 print("MRI range before:", image.min().item(), image.max().item())
 print("MRI range after:", normalized_image.min().item(), normalized_image.max().item())
@@ -34,9 +41,6 @@ print("Normalized MRI dtype:", normalized_image.dtype)
 print("Mask tensor shape:", tuple(mask_tensor.shape))
 print("Mask tensor dtype:", mask_tensor.dtype)
 print("Mask labels after MRI normalization:", torch.unique(mask_tensor).tolist())
-
-image_batch = normalized_image.unsqueeze(0)
-mask_batch = mask_tensor.unsqueeze(0)
 
 print("MRI batch shape:", tuple(image_batch.shape))
 print("Mask batch shape:", tuple(mask_batch.shape))
