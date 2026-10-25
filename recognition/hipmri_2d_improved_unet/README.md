@@ -60,6 +60,8 @@
 
 <span style="color: purple;">Baseline里程碑新增协助：Codex 实现标准U-Net拓扑、有效区域one-hot CE、按split累计的指标、训练／验证与checkpoint保存恢复、仅训练／验证样本推理、曲线及构造检查；实际运行64个训练样本的2轮smoke并每轮验证全部660例。此为自动实现与验证，不记录为用户亲自完成或已理解全部模型。</span>
 
+<span style="color: purple;">Improved里程碑新增协助：Codex 核对任务书Ref[2]及原论文，编写其2D改编模型、模型选择入口和检查；保留baseline及共用数据／loss／指标实现。复核时在真实训练前修正localization通道减半的位置；运行原baseline回归和Improved的固定64样本2轮smoke，每轮验证全部<s>660例</s>660个验证切片样本，核查权重恢复并查看训练参考预测图。代码、运行、文档与提交由Codex及辅助代理完成，不记录为用户独立实现、亲自运行或已理解整组代码。</span>
+
 **审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，<s>归一化理解仍待用户回答</s>归一化数值例已回答正确，<s>batch 理解仍待用户回答</s>batch 形状理解已回答正确，<s>模块导入理解仍待用户回答</s>函数复用理由已回答正确，<s>load_pair 返回顺序的理解仍待用户回答</s>返回顺序已回答正确，<s>Dataset 按编号取样的理解仍待用户回答</s>Dataset 按编号取样已回答正确，<s>DataLoader 分批理解仍待用户回答</s>DataLoader 分批已回答正确，<s>文件名配对核查的理解仍待用户回答</s>文件名配对核查已回答正确，<s>患者分组独立性的理解仍待用户回答</s>case 分组独立性已回答正确，<s>sampler 索引选择的理解仍待用户回答</s>该题未作答；现按用户指定的功能里程碑完成代码、自动检查及整体讲解。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
 
 ## <span style="color: purple;">逐步记录</span>
@@ -295,3 +297,75 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">evidence/baseline_smoke.json 记录完整各轮汇总、样本选择摘要、源文件SHA256和checkpoint摘要；baseline_reference.json 记录固定训练样本推理；baseline_training_curves.png 是聚合曲线。best.pt／last.pt、原始运行JSON和包含MRI的预测图留在忽略的outputs/，不提交模型或数据。代码基于当前重建项目与公开基础架构实现，没有读取旧项目源码、旧权重或旧实验结果作为本次新工作。</span>
 
 <span style="color: purple;">本组从 e76fa43e5b9406ce7f342cec74a17724d9c0843a 开始，仅提交实际baseline实现、检查、文档和汇总证据，实际新hash／时间／作者以git log为准。用户授权执行本组，但尚未反馈已理解全部代码，不能写成用户亲自运行、独立实现或通过check-off。实际tutor check-off仍未完成。本组没有实现Improved U-Net、读取测试集、执行最终评估或发布PR。</span>
+
+## <span style="color: purple;">Improved U-Net 模块与共用流程接入里程碑（2026-10-25）</span>
+
+<span style="color: purple;">本组从7ae1584d97f0b6b60825c54bd0310b6c18ec586f开始，按一个完整功能里程碑推进。任务书第6页的2D Improved U-Net指向Ref[2]；第20页对应Isensee等人的2018年论文 <a href="https://arxiv.org/abs/1802.10508">Brain Tumor Segmentation and Radiomics Survival Prediction: Contribution to the BRATS 2017 Challenge</a>。本模型基于其§2.1／Figure 1做2D改编，保留baseline另作选择。</span>
+
+### <span style="color: purple;">新增模块及一次前向传播</span>
+
+<table style="color: purple;">
+<tr><th>部分</th><th>baseline</th><th>本组Improved实现</th></tr>
+<tr><td>编码特征</td><td>双3×3卷积＋ReLU</td><td>ResidualContext：x＋F(x)，F为两个预激活3×3卷积，中间Dropout2d(0.3)</td></tr>
+<tr><td>预激活</td><td>卷积后ReLU</td><td>PreActConv：InstanceNorm2d → LeakyReLU(0.01) → 卷积</td></tr>
+<tr><td>下采样</td><td>MaxPool2d</td><td>3×3 stride=2卷积</td></tr>
+<tr><td>上采样</td><td>转置卷积</td><td>NearestUpConv：nearest放大2倍，再3×3卷积减半通道</td></tr>
+<tr><td>同级skip融合</td><td>concat后双卷积</td><td>LocalizationBlock：concat后3×3保持拼接通道，再1×1减半通道</td></tr>
+<tr><td>分类输出</td><td>最末层一个1×1分类头</td><td>quarter／half／full三个1×1分类头，逐级nearest上采样并相加，输出单个logits tensor</td></tr>
+</table>
+
+<span style="color: purple;">残差相加要求输入与F(x)形状一致。直通分支保留x，卷积分支学习修正量；当分支卷积全部置零时，检查确认输出严格等于x。InstanceNorm对每张图每个通道的空间位置计算统计量，affine参数可学习，未维护running statistics；Dropout2d训练时随机置零整张特征通道，eval时关闭。以上机制提供不同的表示与优化路径，效果仍须由后续实验判断。</span>
+
+<span style="color: purple;">以固定MRI为例：输入[B,1,256,128] → 五尺度编码通道16／32／64／128／256，对应空间256×128、128×64、64×32、32×16、16×8 → 解码至原尺寸。第一次解码把256通道上采样并映射为128通道，与同级128通道skip拼成256通道；localization先保留256，再经1×1降至128。后续各级按相同方式接入。</span>
+
+<span style="color: purple;">三个分类头分别产生[B,6,64,32]、[B,6,128,64]、[B,6,256,128]。先将quarter放大与half相加，再放大与full相加。最终[B,6,256,128]直接交给既有one-hot CE；同一个loss可以沿三个分类头反向传播到不同深度，检查确认三头均得到非零梯度。这里没有额外auxiliary loss，末端不提前softmax。</span>
+
+<span style="color: purple;">明确的改编选择：3D空间操作改为2D；使用channel-wise Dropout2d、affine InstanceNorm与三个分类头；base16与原baseline共用。论文还包含特定归一化、Dice loss、数据增强、学习率计划和长训练方案；本组保持既有逐片min-max、有效区域CE与smoke优化设置，未复现整套论文训练配方。默认Improved参数量3,190,194，baseline仍为1,940,902；两者容量不同。</span>
+
+<span style="color: purple;">输入仍须为16的倍数；InstanceNorm还要求最深层至少两个空间元素，16×16会得到1×1并被明确拒绝，16×32和32×32可用。当前真实MRI尺寸满足约束。valid_mask只限制loss与指标计数，卷积与InstanceNorm仍会看到图像补边值，因此不声称混合batch补边对预测完全无影响。</span>
+
+### <span style="color: purple;">保留与接入</span>
+
+- <span style="color: purple;">modules.py的原DoubleConv／UNet类源码逐字保留，新增build_model(name, **config)选择baseline_unet或improved_unet。train.py新增--model，默认仍为baseline。两种模型均返回同形状raw logits，后面的训练步骤无需分叉。</span>
+- <span style="color: purple;">dataset.py、losses.py、metrics.py与上一提交字节一致。seed_everything、manifest_hash、select_training_pairs、move_batch、run_epoch、reference_probe六个共用函数源码保持一致；归一化、补边、valid区域、one-hot CE、整集confusion／Dice／IoU和验证禁用更新的规则共用。</span>
+- <span style="color: purple;">checkpoint保存model名称和原有三个model_config字段；训练恢复最佳权重和predict入口均据此选择模型。旧baseline checkpoint无需转换，已用真实旧文件通过新入口恢复。预测仍只提供training／validation；本组未读取测试文件名、像素或指标。</span>
+- <span style="color: purple;">真实训练前复核发现localization初稿把通道减半放在3×3，而论文描述由1×1负责。已改成3×3保持拼接通道、1×1减半，并加入结构检查后再开始运行。此为本轮实际发现和修正的实现偏差，没有包装成此前发生的训练故障。</span>
+
+### <span style="color: purple;">实际运行与验证结果</span>
+
+<span style="color: purple;">evidence/improved_run_plan.json在两次真实运行前记录设置和源文件SHA256。先跑baseline回归，再跑Improved；二者均为seed3710、同一固定64训练样本、2轮、batch4、base16、Adam lr0.001，32次更新；每轮完整验证<s>660例</s>660个验证切片样本（4个case代理组），按最小验证CE保存best。样本清单摘要、训练／验证设置已逐项核对一致，无额外调参或追加训练。同一seed不表示不同架构拥有相同初始权重。</span>
+
+<table style="color: purple;">
+<tr><th>模型／轮次</th><th>在线训练CE</th><th>全660验证CE</th><th>验证macro Dice（排除ID0）</th></tr>
+<tr><td>baseline回归／1</td><td>1.530331</td><td>1.058691</td><td>0.165167</td></tr>
+<tr><td>baseline回归／2</td><td>1.056190</td><td>0.921908</td><td>0.165468</td></tr>
+<tr><td>Improved／1</td><td>0.736550</td><td>0.447986</td><td>0.273869</td></tr>
+<tr><td>Improved／2</td><td>0.353347</td><td>0.385807</td><td>0.339030</td></tr>
+</table>
+
+- <span style="color: purple;">baseline回归：与上一里程碑的样本选择、各轮loss／指标完全相同，最佳checkpoint全部参数tensor逐值相等。旧baseline checkpoint经过当前predict入口得到参考CE0.877492及相同指标，证明新增入口保留了该baseline行为。</span>
+- <span style="color: purple;">Improved第2轮ID0…5 Dice依次为0.969482、0.904251、0.428347、0.362553、0、0；每轮统计21626880个验证有效像素。<s>ID4／ID5仍未学会</s>ID4／ID5的验证Dice仍为0；组织编号映射尚未确认，不能把任意ID的分数称为某组织达标结果。</span>
+- <span style="color: purple;">Improved所有训练步梯度有限且非零，首个参数张量最大变化0.015980；固定训练参考CE从1.877008降至0.249754。最小验证CE选择第2轮，重新加载后参考logits最大差值0；独立predict入口同样得到CE0.249754和原尺寸256×128输出。</span>
+- <span style="color: purple;">47项检查全部通过、0跳过（原34项＋新增13项）：残差直通、多尺度输出／融合、三头梯度、参数更新、恢复一致性、异常输入，以及两模型共用混合尺寸补边batch、训练更新、eval／无梯度验证无状态变化、旧baseline权重兼容。构造检查、真实MRI smoke与用户理解状态分别记录；本轮全部由Codex执行。</span>
+- <span style="color: purple;">已查看Improved聚合曲线及固定训练图预测：预测中出现ID2／ID3区域，但ID2存在碎片和遗漏，边界也有偏差；这是训练图外观检查，不是独立评估或医学判断。预测图和权重留在忽略的outputs/，仅聚合曲线纳入Git。</span>
+- <span style="color: purple;">Improved训练／验证及收尾计时11.926秒；RTX4070Ti上PyTorch峰值allocated529318400 bytes、reserved658505728 bytes，包含checkpoint恢复。没有将其视为纯训练显存、整卡占用或严格速度比较。</span>
+
+<span style="color: purple;">这组smoke验证了模块与流程接通；64个样本的2轮结果不能证明Improved最终优于baseline，也不能归因于某一个模块。正式公平实验、消融、充分训练和最终测试尚未开展；本组没有做测试集评估。</span>
+
+### <span style="color: purple;">复现与提交边界</span>
+
+<span style="color: purple;">在本重建仓库根目录执行；命令块保持可执行，由Git diff显示新增。目录必须取新名称。</span>
+
+```powershell
+$python = '..\..\recognition\hipmri_2d_improved_unet\.venv\Scripts\python.exe'
+$env:PYTHONDONTWRITEBYTECODE = '1'
+$env:MPLBACKEND = 'Agg'
+& $python -B -m unittest discover -s recognition/hipmri_2d_improved_unet/tests -v
+& $python -B recognition/hipmri_2d_improved_unet/train.py --model baseline_unet --output-dir outputs/baseline_regression_reproduce --epochs 2 --batch-size 4 --base-channels 16 --num-classes 6 --lr 0.001 --seed 3710 --train-limit 64 --device cuda
+& $python -B recognition/hipmri_2d_improved_unet/train.py --model improved_unet --output-dir outputs/improved_reproduce --epochs 2 --batch-size 4 --base-channels 16 --num-classes 6 --lr 0.001 --seed 3710 --train-limit 64 --device cuda
+& $python -B recognition/hipmri_2d_improved_unet/predict.py --checkpoint outputs/improved_reproduce/best.pt --split training --filename case_004_week_0_slice_12.nii.gz --output-dir outputs/improved_reference_reproduce --device cuda
+```
+
+<span style="color: purple;">evidence/improved_smoke.json保存各轮结果、预运行计划关联、源文件与权重摘要、检查和外观核查；improved_reference.json保存固定训练图推理；improved_training_curves.png为聚合曲线；baseline_regression.json记录保留行为的验证。旧baseline及预处理证据原样保留，权重、MRI、逐像素预测不纳入Git。</span>
+
+<span style="color: purple;">已有16次真实提交不改写，本组完成后增加一次实际里程碑提交，实际hash／时间／操作者以git log为准。未修改旧项目、旧PR或远程仓库。用户尚未确认理解整组Improved代码，实际tutor check-off与originality hurdle状态不因自动执行而改变；也不能声称旧测试结果此前从未被接触。</span>

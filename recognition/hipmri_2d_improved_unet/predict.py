@@ -1,4 +1,4 @@
-"""Reload baseline weights and inspect one training/validation sample only."""
+"""Reload the checkpoint's model and inspect one training/validation sample only."""
 
 import argparse
 import json
@@ -10,7 +10,7 @@ import torch
 from dataset import collate_padded, collect_pairs, crop_to_original, load_pair
 from losses import segmentation_cross_entropy
 from metrics import SegmentationMetrics
-from modules import UNet
+from modules import build_model
 
 
 def main():
@@ -42,9 +42,8 @@ def main():
     if pair is None:
         raise ValueError("Requested filename not found in the selected training/validation split.")
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
-    if checkpoint.get("model") != "baseline_unet":
-        raise ValueError("This milestone only supports the baseline U-Net checkpoint.")
-    model = UNet(**checkpoint["model_config"]).to(device)
+    model_name = checkpoint["model"]
+    model = build_model(model_name, **checkpoint["model_config"]).to(device)
     model.load_state_dict(checkpoint["model_state"])
     model.eval()
     sample = load_pair(*pair)
@@ -72,14 +71,16 @@ def main():
     fig, axes = plt.subplots(1, 3, figsize=(10, 6), layout="constrained")
     axes[0].imshow(image_original, cmap="gray", interpolation="nearest")
     axes[0].set_title("Training MRI" if args.split == "training" else "Validation MRI")
-    for axis, values, title in ((axes[1], target_original, "Reference mask"), (axes[2], prediction_original, "Baseline smoke prediction")):
+    prediction_title = f"{model_name} prediction"
+    for axis, values, title in ((axes[1], target_original, "Reference mask"), (axes[2], prediction_original, prediction_title)):
         shown = axis.imshow(values, cmap=colors, vmin=-0.5, vmax=num_classes - 0.5, interpolation="nearest")
         axis.set_title(title)
     fig.colorbar(shown, ax=list(axes[1:]), ticks=list(range(num_classes)), label="Class ID")
     fig.suptitle(f"{args.split}: {args.filename} | checkpoint epoch {checkpoint['epoch']}")
     fig.savefig(args.output_dir / "prediction.png", dpi=150)
     plt.close(fig)
-    summary = {"model": "baseline_unet", "performed_by": "Codex automation", "split": args.split,
+    summary = {"model": model_name, "performed_by": "Codex automation", "split": args.split,
+               "is_improved_run": model_name == "improved_unet",
                "filename": args.filename, "checkpoint_epoch": checkpoint["epoch"],
                "limited_training_smoke": checkpoint.get("limited_training_smoke", False),
                "logit_shape": list(logits.shape), "restored_shape": list(prediction_original.shape),

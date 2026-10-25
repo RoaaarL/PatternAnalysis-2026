@@ -1,4 +1,4 @@
-"""Train/validate only the baseline U-Net; no test split or Improved model."""
+"""Train/validate baseline or Improved U-Net with the same data and evaluation flow."""
 
 import argparse
 from datetime import datetime, timedelta, timezone
@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from dataset import HipMRIPairDataset, collate_padded, collect_pairs, load_pair, patient_ids
 from losses import segmentation_cross_entropy
 from metrics import SegmentationMetrics
-from modules import UNet
+from modules import build_model
 
 
 def seed_everything(seed):
@@ -103,7 +103,7 @@ def reference_probe(model, reference_sample, device):
     return float(loss.item()), logits.detach().cpu()
 
 
-def plot_history(history, output_dir):
+def plot_history(history, output_dir, model_name="baseline_unet"):
     os.environ.setdefault("MPLBACKEND", "Agg")
     os.environ.setdefault("MPLCONFIGDIR", str(output_dir.resolve() / ".matplotlib"))
     import matplotlib.pyplot as plt
@@ -112,7 +112,7 @@ def plot_history(history, output_dir):
     fig, axes = plt.subplots(1, 2, figsize=(10, 4), layout="constrained")
     for split in ("training", "validation"):
         axes[0].plot(epochs, [record[split]["cross_entropy"] for record in history], marker="o", label=split)
-    axes[0].set(xlabel="Epoch on selected training set", ylabel="Valid-pixel CE", title="Baseline loss")
+    axes[0].set(xlabel="Epoch on selected training set", ylabel="Valid-pixel CE", title=f"{model_name}: loss")
     axes[0].legend()
     for class_id in range(len(history[0]["validation"]["dice_per_class"])):
         values = [record["validation"]["dice_per_class"][class_id] for record in history]
@@ -128,6 +128,7 @@ def parse_args():
     workspace = Path(__file__).resolve().parents[4]
     parser.add_argument("--data-root", type=Path, default=workspace / "Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data")
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/baseline"))
+    parser.add_argument("--model", choices=("baseline_unet", "improved_unet"), default="baseline_unet")
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--base-channels", type=int, default=16)
@@ -171,7 +172,7 @@ def main():
     validation_loader = DataLoader(HipMRIPairDataset(validation_pairs), batch_size=args.batch_size, shuffle=False,
                                    num_workers=0, collate_fn=collate_padded)
     config = {"in_channels": 1, "num_classes": args.num_classes, "base_channels": args.base_channels}
-    model = UNet(**config).to(device)
+    model = build_model(args.model, **config).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
@@ -179,9 +180,9 @@ def main():
     initial_parameter = next(model.parameters()).detach().cpu().clone()
     args.output_dir.mkdir(parents=True)
     report = {
-        "milestone": "baseline_unet_minimal_training", "performed_by": "Codex automation; not user-performed verification",
+        "milestone": f"{args.model}_minimal_training", "performed_by": "Codex automation; not user-performed verification",
         "created_at": datetime.now(timezone(timedelta(hours=10))).isoformat(),
-        "status": "running", "model": "baseline_unet", "model_config": config,
+        "status": "running", "model": args.model, "model_config": config,
         "parameters": sum(parameter.numel() for parameter in model.parameters()),
         "optimizer": {"name": "Adam", "lr": args.lr}, "objective": "valid-region one-hot cross-entropy",
         "selection_metric": "minimum full-validation cross_entropy", "seed": args.seed,
@@ -195,9 +196,10 @@ def main():
                  "selection_policy": "all training pairs" if len(selected) == len(training_pairs) else "fixed seeded subset including the learning reference; indices sorted before seeded epoch shuffling",
                  "selected_training_filenames": [pair[0].name for pair in selected]},
         "limited_training_smoke": len(selected) < len(training_pairs), "test_split_read": False,
-        "improved_unet_implemented": False, "reference_name": args.reference_name,
+        "improved_unet_implemented": args.model == "improved_unet", "is_improved_run": args.model == "improved_unet",
+        "reference_name": args.reference_name,
         "reference_ce_before_training": initial_reference_ce, "epochs": [],
-        "claim_boundary": "A limited smoke run demonstrates the pipeline, not final baseline quality, fair model comparison or unseen-test performance.",
+        "claim_boundary": "A limited smoke run demonstrates the pipeline, not final model quality, fair model comparison or unseen-test performance.",
         "case_identifier_note": "Numeric case field is a grouping proxy; original patient identity mapping is unverified.",
     }
     if not report["limited_training_smoke"]:
@@ -210,7 +212,7 @@ def main():
             validation = run_epoch(model, validation_loader, device, args.num_classes)
             record = {"epoch": epoch, "training": training, "validation": validation}
             report["epochs"].append(record)
-            checkpoint = {"model": "baseline_unet", "model_config": config, "model_state": model.state_dict(),
+            checkpoint = {"model": args.model, "model_config": config, "model_state": model.state_dict(),
                           "optimizer_state": optimizer.state_dict(), "epoch": epoch, "seed": args.seed,
                           "validation_cross_entropy": validation["cross_entropy"], "limited_training_smoke": report["limited_training_smoke"]}
             torch.save(checkpoint, args.output_dir / "last.pt")
@@ -223,7 +225,7 @@ def main():
         report["first_parameter_max_abs_change"] = float((next(model.parameters()).detach().cpu() - initial_parameter).abs().max())
         report["reference_ce_after_training"], _ = reference_probe(model, reference_sample, device)
         loaded = torch.load(args.output_dir / "best.pt", map_location="cpu", weights_only=True)
-        restored = UNet(**loaded["model_config"]).to(device)
+        restored = build_model(loaded["model"], **loaded["model_config"]).to(device)
         restored.load_state_dict(loaded["model_state"])
         restored_ce, restored_logits = reference_probe(restored, reference_sample, device)
         torch.testing.assert_close(restored_logits, best_logits, rtol=1e-5, atol=1e-6)
@@ -232,7 +234,7 @@ def main():
         report["optimizer_steps"] = sum(record["training"]["optimizer_steps"] for record in report["epochs"])
         report["peak_cuda_allocated_bytes"] = torch.cuda.max_memory_allocated(device) if device.type == "cuda" else None
         report["peak_cuda_reserved_bytes"] = torch.cuda.max_memory_reserved(device) if device.type == "cuda" else None
-        plot_history(report["epochs"], args.output_dir)
+        plot_history(report["epochs"], args.output_dir, args.model)
         report["curves_file"] = "training_curves.png"
         report["status"] = "passed"
     except Exception as error:
@@ -242,7 +244,7 @@ def main():
     finally:
         report["elapsed_seconds"] = round(time.perf_counter() - started, 3)
         (args.output_dir / "run_summary.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    print(f"Completed baseline run: {args.output_dir.resolve()}; optimizer steps={report['optimizer_steps']}; best epoch={best_epoch}", flush=True)
+    print(f"Completed {args.model} run: {args.output_dir.resolve()}; optimizer steps={report['optimizer_steps']}; best epoch={best_epoch}", flush=True)
 
 
 if __name__ == "__main__":
