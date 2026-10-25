@@ -40,6 +40,8 @@
 
 ## Artificial Intelligence Usage Disclosure
 
+<span style="color: purple;">2026-10-26资源记录与正式训练授权：用户正确解释参考图macro不能证明ID5效果，以及验证不能反向更新，并明确认可20轮方案及派生ID保留工作假设。Codex记录此确认，新增分阶段资源记录、推理性能入口、协议漂移与setup失败检查，再按批准方案执行训练／验证。自动检查、GPU运行与Git操作仍由Codex及辅助代理完成，不能记为用户亲自运行或独立实现。</span>
+
 <span style="color: purple;">正式实验前修复与核查：Codex按用户后续审查要求添加像素读取前的shape／Affine检查、针对性检查及训练／验证全量头信息补充审计；核实CSIRO原始标签说明，并明确课程2D派生保留ID尚未独立确认。只读比较新旧源码，重新检查固定训练图及现有smoke权重的输入／恢复链路，准备正式实验方案。未新增真实MRI训练，未读取测试目录、文件名或像素；本轮用户整体核查和正式训练确认均保持待完成。</span>
 
 **工具：** OpenAI Codex，包括用于只读任务书核对的辅助代理。
@@ -472,3 +474,28 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 ```
 
 <span style="color: purple;">已有17次提交保持；修复、来源配置、核查脚本、检查、证据与待确认方案按本轮实际进度提交一次，真实hash／日期／操作者以git log为准。权重、MRI和含MRI预测图仍在忽略的outputs/；旧项目／PR未修改，新仓库仅本地保存，不倒签或覆盖历史。本轮在整体核查与方案确认处停止，不启动正式全量训练。</span>
+
+## <span style="color: purple;">用户确认与分阶段资源记录就绪（2026-10-26）</span>
+
+<span style="color: purple;">本组从344e1f38a35a888c2c7baa4e493d4a34d28c3c75开始。用户本次回答两个核查点均正确，明确认可方案、接受“课程派生标签保留原ID”的工作假设，并授权由Codex执行资源检查后两模型各20轮训练及本地Git提交，仍不做测试评估。evidence/user_confirmation_20261026.json保存用户原话、日期与原方案摘要；此前proposal和待确认记录作为当时事实保留。该确认不独立证明派生映射、全部代码理解、check-off或originality通过。</span>
+
+<span style="color: purple;">resource_monitor.py新增StageMeasurement上下文：进入CUDA阶段先同步、重置峰值并记录起始allocated／reserved；退出先同步，再记录峰值和结束占用及耗时。CPU的CUDA字段为null。它不改RNG、模型模式、参数或训练公式，不清缓存；body异常继续抛出，失败统计不能伪装成功。</span>
+
+<table style="color: purple;">
+<tr><th>阶段</th><th>驻留对象与范围</th></tr>
+<tr><td>每轮training</td><td>模型、Adam状态（首次更新后建立）、梯度，以及该轮batch输入／输出／中间激活；统计完整epoch含读取与指标的同步墙钟时间</td></tr>
+<tr><td>每轮validation</td><td>同一模型、Adam状态和最后训练步留下的梯度仍驻留；新增验证输入／输出，eval／无梯度／无optimizer更新</td></tr>
+<tr><td>checkpoint恢复</td><td>最终训练模型、Adam和梯度仍驻留；另建第二个模型加载best，执行固定训练参考恢复核查。checkpoint先在CPU加载</td></tr>
+</table>
+
+<span style="color: purple;">各阶段都记录绝对峰值，不是相对起点的新增量；缓存reserved占用仍计入，不能把它当独立临时需求或整卡VRAM。报告中的兼容peak字段是已测阶段峰值的最大值；不再声称是未测流程的完整进程峰值。旧smoke的“包含恢复”范围原样保留。</span>
+
+<span style="color: purple;">train.py在原共享epoch调用外包裹资源记录，只加批次进度输出，loss／反向／Adam／验证公式保持。--formal-plan会检查用户确认、20轮／batch4／base16／六类／lr0.001／seed3710／CUDA／无train-limit、模型名单、数据清单及源码摘要，任一漂移拒绝。训练主体失败或中断标incomplete；另补setup失败兜底，模型上GPU或参考读取等在主体前失败，也保存新路径下的incomplete报告，不覆盖旧输出。</span>
+
+<span style="color: purple;">67项检查通过、0跳过：在原53项上增加5项资源记录CPU／mock-CUDA检查和9项正式计划／失败记录检查。GPU另以原64样本／2轮设置检查两模型，逐轮loss／指标、参考CE及best权重与各自原smoke逐值一致，新增六个阶段均成功，证据为evidence/resource_checks_20261026.json。这是资源接入回归，不是正式20轮，也不参与最终选模。</span>
+
+<span style="color: purple;">profile_inference.py在独立进程加载checkpoint，释放CPU checkpoint对象后只将模型放到GPU，不构造优化器。使用固定合成FP32输入，batch1／4及256×128／256×144，10次warmup后50次前后同步计时，保存原始ms、median和linear方法p95；只计forward与host启动／同步，排除加载、I/O、传输、指标和绘图。每组合setup前释放闲置cache，warmup cache保留进入测量；此策略不用于训练。FP32指张量类型且无AMP，实际TF32后端设置单独记录。</span>
+
+<span style="color: purple;">推理入口已用构造base2 checkpoint在CPU走完四组合并复算百分位，重复输出明确拒绝；CPU结果不当GPU性能。两模型正式GPU profile在各20轮完成、验证CE选定checkpoint后执行。模型／预处理／loss／指标代码保持；源文件与实际配置会在正式运行前冻结记录，运行过程不因验证分数追加轮数或改参数。</span>
+
+<span style="color: purple;">本组先提交已检查的资源实现、确认记录和回归证据；随后在运行前写入包含此源码提交、文件hash、训练／验证清单hash、批准方案及新输出路径的formal_run_plan_20261026.json。正式结果完成后再按真实进度提交证据。所有运行均由Codex执行；旧项目、旧结果和旧Git历史保持，仍不读测试数据、不发布PR。</span>
