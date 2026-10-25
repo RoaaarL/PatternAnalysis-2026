@@ -1,6 +1,7 @@
 """Data loading and preprocessing helpers for the guided HipMRI rebuild."""
 
 from pathlib import Path
+import re
 
 import nibabel as nib
 import numpy as np
@@ -51,6 +52,19 @@ def collect_pairs(image_dir, mask_dir):
     if mask_count != len(pairs):
         raise ValueError("Extra mask files without a matching MRI; check filenames.")
     return pairs
+
+
+def patient_ids(pairs):
+    """Use the numeric case field as a patient-group key; read filenames only."""
+    ids = set()
+    for image_path, _ in pairs:
+        match = re.fullmatch(
+            r"case_(\d+)_week_\d+_slice_\d+\.nii\.gz", image_path.name
+        )
+        if match is None:
+            raise ValueError(f"Unexpected MRI filename: {image_path.name}")
+        ids.add(int(match.group(1)))
+    return ids
 
 
 class HipMRIPairDataset(Dataset):
