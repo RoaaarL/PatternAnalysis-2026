@@ -58,6 +58,8 @@
 
 <span style="color: purple;">本里程碑新增协助：Codex 完成归一化、按16倍数向下／向右补边、有效区域与原尺寸记录、混合尺寸batch整理、原尺寸裁回及有效像素选择；编写构造检查和仅训练／验证的全量预处理审计。所有自动检查均由 Codex 执行，不作为用户亲自运行或理解的证明。</span>
 
+<span style="color: purple;">Baseline里程碑新增协助：Codex 实现标准U-Net拓扑、有效区域one-hot CE、按split累计的指标、训练／验证与checkpoint保存恢复、仅训练／验证样本推理、曲线及构造检查；实际运行64个训练样本的2轮smoke并每轮验证全部660例。此为自动实现与验证，不记录为用户亲自完成或已理解全部模型。</span>
+
 **审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，<s>归一化理解仍待用户回答</s>归一化数值例已回答正确，<s>batch 理解仍待用户回答</s>batch 形状理解已回答正确，<s>模块导入理解仍待用户回答</s>函数复用理由已回答正确，<s>load_pair 返回顺序的理解仍待用户回答</s>返回顺序已回答正确，<s>Dataset 按编号取样的理解仍待用户回答</s>Dataset 按编号取样已回答正确，<s>DataLoader 分批理解仍待用户回答</s>DataLoader 分批已回答正确，<s>文件名配对核查的理解仍待用户回答</s>文件名配对核查已回答正确，<s>患者分组独立性的理解仍待用户回答</s>case 分组独立性已回答正确，<s>sampler 索引选择的理解仍待用户回答</s>该题未作答；现按用户指定的功能里程碑完成代码、自动检查及整体讲解。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
 
 ## <span style="color: purple;">逐步记录</span>
@@ -244,3 +246,52 @@ $env:MPLCONFIGDIR = Join-Path $PWD 'outputs/.matplotlib'
 - <span style="color: purple;">证据：evidence/preprocessing_audit.json 保存去掉本机绝对数据路径的汇总、真实混合batch结果和源文件SHA256，不含图像／tensor／完整患者清单。原始机器报告 outputs/preprocessing_audit.json、限量试跑及预览仍留在忽略目录；限量试跑未被当作全量结果。审计源码在完整运行开始后未修改。</span>
 - <span style="color: purple;">证据边界：所有代码编写、自动检查、全量审计和本次提交均由 Codex 执行。用户本轮只调整了协作粒度，尚未确认已理解整组预处理，不记为亲自运行或通过原创性审查。审计检查的是处理契约，不独立证明真实身份映射、物理空间对应或标注医学准确度，也不构成模型性能结果。</span>
 - <span style="color: purple;">当前里程碑到此完成；下一组是 baseline U-Net 及最小训练流程，本轮没有生成或运行模型、优化器、训练与测试评估。原项目、原PR、原历史不变，实际 tutor check-off 仍未完成。</span>
+
+## <span style="color: purple;">Baseline U-Net 与最小训练流程里程碑（2026-10-25）</span>
+
+<span style="color: purple;">本组按用户指定的完整功能里程碑推进；只实现 baseline，不提前添加 Improved U-Net 或测试集评估。读取训练／验证文件夹，延续相同逐图归一化、补边、有效区域与 case 分组边界。此前15次真实提交全部保留。</span>
+
+### <span style="color: purple;">实现与整体流程</span>
+
+- <span style="color: purple;">modules.py 只依赖 PyTorch：四次2×下采样、双3×3卷积＋ReLU、转置卷积上采样、同级skip concat、1×1输出6类原始logits。参数量1,940,902。没有预训练权重、BN、dropout、residual、attention或deep supervision。</span>
+- <span style="color: purple;">拓扑依据：[U-Net原论文](https://arxiv.org/abs/1505.04597)。原文使用valid卷积／skip裁剪和64起始通道；本项目采用same-padding和base_channels=16以匹配既有尺寸管线及当前资源，Adam也是本项目选择，不称为逐细节复现原论文。</span>
+- <span style="color: purple;">最新任务书第5页要求basic U-Net baseline与one-hot多通道标注，第13页要求训练保存、曲线与加载推理。本组实际接入这些接口；未据此声称最终提交、患者真实身份映射、医学准确度或 originality hurdle 已通过。</span>
+- <span style="color: purple;">losses.py 在训练时把 class-ID target 安全编码为 [B,6,H,W] one-hot：先将无效的-100替为安全0，再编码并将无效位置所有通道清零。实际CE按 one_hot×log_softmax 对有效像素求平均；构造检查证明值与梯度等价于 F.cross_entropy(ignore_index=-100)。没有加入Dice loss，原始mask不改写。</span>
+- <span style="color: purple;">train.py 的主线：DataLoader → UNet logits → 有效区域CE → zero_grad／backward／Adam step；每步检查有限非零梯度。验证切到eval并关闭梯度，不执行optimizer step。训练CE为各batch更新前的在线统计；验证为epoch结束后固定模型的整集统计，二者不混称。</span>
+- <span style="color: purple;">metrics.py 按整个split累计 int64 confusion matrix，然后计算每类Dice／IoU；不平均各batch的Dice。类别在预测与target均缺失时返回None并排除macro；只有预测、没有target的类别计0。macro明确排除数字ID0，这一数值约定不替代组织标签映射。</span>
+- <span style="color: purple;">最新任务书第17页列出组织名称但未给出0…5对应关系，因此所有结果只标class ID。尤其不能把ID1的Dice当作prostate Dice，更不能据此宣称达到Normal模型的最终指标。</span>
+- <span style="color: purple;">predict.py 只提供training／validation两种split，加载本次baseline checkpoint，eval＋无梯度推理，裁回原尺寸，输出参考／预测对照图。没有test选项，也未实现Improved模型。</span>
+
+<span style="color: purple;">固定参考MRI的张量链：image [1,1,256,128] → encoder通道16/32/64/128 → bottleneck [1,256,16,8] → decoder＋skip → logits [1,6,256,128]。one-hot target同为[1,6,256,128]；每个原始像素只有正确类别通道为1，padding通道全0。logits是分数，不在模型末端重复做softmax。</span>
+
+### <span style="color: purple;">真实运行：固定的小规模功能演示</span>
+
+- <span style="color: purple;">运行前记录计划于 evidence/baseline_run_plan.json：seed=3710，Adam lr=0.001，batch_size=4，base16，2轮；从11460训练路径中固定随机选64个（包含case_004_week_0_slice_12），每轮完整遍历这64个样本，覆盖20个case分组；每轮验证全部660个验证样本。完整训练／验证仍为31／4个case代理分组、交集为空。未进行超参数搜索或按结果追加训练。</span>
+- <span style="color: purple;">这两轮是 selected-subset / smoke epochs，不是对11460个训练样本完成两轮训练，也不是正式公平baseline成绩。后续正式实验必须为baseline和Improved另定相同训练／验证协议。</span>
+
+<table style="color: purple;">
+<tr><th>64样本smoke轮次</th><th>在线训练CE</th><th>全660验证CE</th><th>验证ID1 Dice</th><th>验证macro Dice（排除ID0）</th></tr>
+<tr><td>1</td><td>1.530331</td><td>1.058691</td><td>0.825835</td><td>0.165167</td></tr>
+<tr><td>2</td><td>1.056190</td><td>0.921908</td><td>0.827342</td><td>0.165468</td></tr>
+</table>
+
+- <span style="color: purple;">实际发生32次Adam更新；固定训练参考CE由1.706104降至0.877492，首个参数张量最大变化0.029494。每轮验证统计21626880个有效像素。验证ID0、2、3、4、5的Dice均为0；预测主要落在ID1，少数类别尚未学会，不能只凭CE下降声称分割有效或满足最终要求。</span>
+- <span style="color: purple;">按预先规定的最小验证CE选择第2轮best checkpoint；重新加载后的参考logits最大差值为0，独立predict入口得到同一参考CE 0.877492、logits [1,6,256,128]并恢复256×128输出。训练参考图属于训练样本，不是独立评估。</span>
+- <span style="color: purple;">CUDA运行：NVIDIA GeForce RTX4070Ti；记录的训练／验证及收尾流程用时9.845秒。PyTorch峰值allocated=171819008 bytes、reserved=209715200 bytes；该进程峰值包含checkpoint恢复等流程，不是纯训练峰值或整卡VRAM。记录了软件版本与seed；没有验证跨环境位级一致性。</span>
+- <span style="color: purple;">34项自动检查全部通过、0跳过：包括既有预处理、模型形状／梯度／权重恢复、手算Dice/IoU与缺失类别、one-hot CE值及梯度等价、padding排除、训练实际更新与验证无更新。构造数据检查不是额外MRI实验；全部检查由Codex执行。</span>
+
+### <span style="color: purple;">复现与证据</span>
+
+<span style="color: purple;">以下新增命令块保持可执行，颜色不嵌入命令；由Git diff显示新增。所有输出目录必须是新目录，以保留既有运行记录。</span>
+
+```powershell
+$python = '..\..\recognition\hipmri_2d_improved_unet\.venv\Scripts\python.exe'
+$env:PYTHONDONTWRITEBYTECODE = '1'
+& $python -B -m unittest discover -s recognition/hipmri_2d_improved_unet/tests -v
+& $python -B recognition/hipmri_2d_improved_unet/train.py --output-dir outputs/baseline_reproduce --epochs 2 --batch-size 4 --base-channels 16 --num-classes 6 --lr 0.001 --seed 3710 --train-limit 64 --device cuda
+& $python -B recognition/hipmri_2d_improved_unet/predict.py --checkpoint outputs/baseline_reproduce/best.pt --split training --filename case_004_week_0_slice_12.nii.gz --output-dir outputs/baseline_reference_reproduce --device cuda
+```
+
+<span style="color: purple;">evidence/baseline_smoke.json 记录完整各轮汇总、样本选择摘要、源文件SHA256和checkpoint摘要；baseline_reference.json 记录固定训练样本推理；baseline_training_curves.png 是聚合曲线。best.pt／last.pt、原始运行JSON和包含MRI的预测图留在忽略的outputs/，不提交模型或数据。代码基于当前重建项目与公开基础架构实现，没有读取旧项目源码、旧权重或旧实验结果作为本次新工作。</span>
+
+<span style="color: purple;">本组从 e76fa43e5b9406ce7f342cec74a17724d9c0843a 开始，仅提交实际baseline实现、检查、文档和汇总证据，实际新hash／时间／作者以git log为准。用户授权执行本组，但尚未反馈已理解全部代码，不能写成用户亲自运行、独立实现或通过check-off。实际tutor check-off仍未完成。本组没有实现Improved U-Net、读取测试集、执行最终评估或发布PR。</span>
