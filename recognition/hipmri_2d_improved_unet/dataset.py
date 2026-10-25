@@ -1,5 +1,7 @@
 """Data loading and preprocessing helpers for the guided HipMRI rebuild."""
 
+from pathlib import Path
+
 import nibabel as nib
 import numpy as np
 import torch
@@ -27,6 +29,28 @@ def load_pair(image_path, mask_path):
     image_tensor = torch.from_numpy(image).to(torch.float32).unsqueeze(0)
     mask_tensor = torch.from_numpy(mask).to(torch.long)
     return minmax_normalize(image_tensor), mask_tensor
+
+
+def collect_pairs(image_dir, mask_dir):
+    """Match existing case_/seg_ filenames without reading NIfTI contents."""
+    image_paths = sorted(
+        path for path in Path(image_dir).glob("case_*.nii.gz") if path.is_file()
+    )
+    if not image_paths:
+        raise ValueError(f"No MRI files found in {image_dir}")
+    pairs = []
+    for image_path in image_paths:
+        mask_name = image_path.name.replace("case_", "seg_", 1)
+        mask_path = Path(mask_dir) / mask_name
+        if not mask_path.is_file():
+            raise FileNotFoundError(f"Missing mask: {mask_path}")
+        pairs.append((image_path, mask_path))
+    mask_count = sum(
+        path.is_file() for path in Path(mask_dir).glob("seg_*.nii.gz")
+    )
+    if mask_count != len(pairs):
+        raise ValueError("Extra mask files without a matching MRI; check filenames.")
+    return pairs
 
 
 class HipMRIPairDataset(Dataset):
