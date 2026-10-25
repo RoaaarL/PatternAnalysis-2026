@@ -8,6 +8,17 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
+
+def minmax_normalize(values):
+    if not torch.isfinite(values).all():
+        raise ValueError("MRI intensities must be finite before normalization.")
+    minimum = values.min()
+    maximum = values.max()
+    if maximum == minimum:
+        return torch.zeros_like(values)
+    return (values - minimum) / (maximum - minimum)
+
+
 data_root = Path(
     "../../Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data"
 )
@@ -32,6 +43,13 @@ print("MRI tensor dtype:", image_tensor.dtype)
 print("Mask tensor shape:", tuple(mask_tensor.shape))
 print("Mask tensor dtype:", mask_tensor.dtype)
 print("Mask tensor labels:", torch.unique(mask_tensor).tolist())
+
+normalized_image = minmax_normalize(image_tensor)
+print("MRI range before:", image_tensor.min().item(), image_tensor.max().item())
+print("MRI range after:", normalized_image.min().item(), normalized_image.max().item())
+print("Normalized MRI shape:", tuple(normalized_image.shape))
+print("Normalized MRI dtype:", normalized_image.dtype)
+print("Mask labels after MRI normalization:", torch.unique(mask_tensor).tolist())
 
 # These four display colors cover the labels observed in this fixed slice.
 mask_colors = ListedColormap(["black", "gold", "deepskyblue", "magenta"])

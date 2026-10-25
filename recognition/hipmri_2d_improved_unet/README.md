@@ -16,7 +16,7 @@
 - **操作者：** Codex 执行目录、数据文件存在性、运行环境和旧 Git 状态核验，创建本说明及根目录 `.gitignore`，并执行初始提交。Git 使用本地自动化身份 `Codex <codex@local.invalid>`；该保留域名地址只是身份标识，不是用户邮箱。
 - **实际产物：** <span style="color: purple;"><s>仅本说明与必要忽略规则；尚未实现数据读取、模型或训练。</s></span> <span style="color: purple;">起步提交仅包含本说明与必要忽略规则；本次进一步提交固定一对训练文件的读取脚本，尚未实现模型或训练。</span>
 - **Codex 自动核验：** 指定训练 MRI 和 mask 文件均存在且非空；可复用环境能导入 NumPy、NiBabel、PyTorch，且能检测到 GPU。这些检查不是用户亲自完成的检查，也不证明数据内容一致或用户已理解。
-- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；当前等待单样本 tensor 形状的理解回答，不记录为用户亲自运行。</span>
+- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；<s>当前等待单样本 tensor 形状的理解回答</s>单样本 tensor 通道轴已回答正确，目前等待 min-max 归一化数值例的回答，不记录为用户亲自运行。</span>
 - **Git 记录：** 初始提交的实际 hash、时间、作者及文件列表以 `git log --format=fuller --stat` 为准；不设置过去的提交时间，不改写旧历史。
 
 ## 外部数据与可复用环境
@@ -42,9 +42,9 @@
 
 **工具：** OpenAI Codex，包括用于只读任务书核对的辅助代理。
 
-**本轮具体协助：** 核对任务书第6、14、15、16页的相关要求，核实本地路径、训练文件存在性及可复用运行环境，创建独立仓库、README 和忽略规则，执行初始 Git 提交，并提供第一小步的文件定位讲解。<span style="color: purple;">随后按用户授权运行文件定位命令；本次审阅目录中已有的未提交读取草稿、补充 mask 标签输出、运行固定训练样本并讲解代码，执行本步骤的真实提交。</span> <span style="color: purple;">本步进一步添加并运行同一训练样本的 Matplotlib 并排预览，检查生成图像，记录用户已答对的类别编号问题；未创建后续模型或训练代码。</span> <span style="color: purple;">随后添加同一训练样本的 CPU tensor 转换、mask 转整数前的值检查及形状／类型输出；由 Codex 运行并核验有限值和 mask 逐点数值保留，未代替用户回答理解问题。</span>
+**本轮具体协助：** 核对任务书第6、14、15、16页的相关要求，核实本地路径、训练文件存在性及可复用运行环境，创建独立仓库、README 和忽略规则，执行初始 Git 提交，并提供第一小步的文件定位讲解。<span style="color: purple;">随后按用户授权运行文件定位命令；本次审阅目录中已有的未提交读取草稿、补充 mask 标签输出、运行固定训练样本并讲解代码，执行本步骤的真实提交。</span> <span style="color: purple;">本步进一步添加并运行同一训练样本的 Matplotlib 并排预览，检查生成图像，记录用户已答对的类别编号问题；未创建后续模型或训练代码。</span> <span style="color: purple;">随后添加同一训练样本的 CPU tensor 转换、mask 转整数前的值检查及形状／类型输出；由 Codex 运行并核验有限值和 mask 逐点数值保留，未代替用户回答理解问题。</span> <span style="color: purple;">本步添加逐片 min-max 归一化小函数，仅用于 MRI tensor；Codex 运行固定训练样本，并额外用构造的常量与 NaN 输入核查边界，记录为代码检查而非 MRI 实验结果。</span>
 
-**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，tensor 理解核查仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
+**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，归一化理解仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
 
 ## <span style="color: purple;">逐步记录</span>
 
@@ -80,5 +80,15 @@
 - <span style="color: purple;">转换保护：先检查 mask 数值有限且等于向下取整后的自身，再转为整数。这样可拒绝异常的非整数标签，而不是把假设的 1.7 静默转成 1；当前片仍仅观察到 0、1、2、3。</span>
 - <span style="color: purple;">Codex 实际输出：MRI tensor shape: (1, 256, 128)；MRI tensor dtype: torch.float32；Mask tensor shape: (256, 128)；Mask tensor dtype: torch.int64；Mask tensor labels: [0, 1, 2, 3]。脚本经 runpy 在独立 Python 进程中执行，退出码为 0，原有预览也按现有代码重新生成。</span>
 - <span style="color: purple;">Codex 额外核查：两个 tensor 均在 CPU；MRI tensor 所有数值有限；mask_tensor 转回 NumPy 后与原 mask 逐点数值相等。实际输出为 Codex checks: CPU tensors, finite MRI tensor, exact mask values: PASS。这些不是用户亲自完成的检查。</span>
-- <span style="color: purple;">用户理解状态：显示颜色不改变类别编号已回答正确；本步等待回答“假设单张图有三个通道，空间大小仍是 256×128，它的单样本 tensor shape 应是什么”。尚不记录为用户已理解全部 tensor 代码。</span>
+- <span style="color: purple;">用户理解状态：显示颜色不改变类别编号已回答正确；<s>本步等待回答“假设单张图有三个通道，空间大小仍是 256×128，它的单样本 tensor shape 应是什么”。</s>用户现已回答：“应该是 (3, 256, 128)，最前面的 3 表示通道数。”Codex 核对为正确，确认的是单样本通道轴这一点。尚不记录为用户已理解全部 tensor 代码。</span>
 - <span style="color: purple;">Git 与停止位置：开始本步时最新提交为 71d4075fc25902e80ab97e4898ec938bbc87ac9e；本步只提交实际代码和带标记的说明，实际 hash、时间和操作者以 git log 为准。不保存 tensor 数据，不创建 Dataset／batch／归一化／补边／模型或训练。与报告对应的是数据模块输入形状和类型的实际运行证据、渐进记录及 AI 披露。</span>
+
+### <span style="color: purple;">对固定训练 MRI 做逐片 min-max 归一化（2026-10-25）</span>
+
+- <span style="color: purple;">本步问题与选择：将这张训练 MRI 的强度缩放到 0～1，便于核查后续输入范围。这是本实现当前选择的逐片预处理方案，不是课程指定方案，也未证明优于其他 MRI 归一化方法。min/max 只从当前这一张训练 MRI 取得，未汇总验证集或测试集统计。</span>
+- <span style="color: purple;">实际改动：Codex 在现有脚本添加 minmax_normalize(values) 小函数：拒绝非有限数值；非恒定图按 (values-min)/(max-min) 转换；若 max=min 则返回同形状全零 tensor，避免除零。结果保存在新变量 normalized_image，原 image_tensor 和 mask_tensor 不参与原地修改。</span>
+- <span style="color: purple;">真实样本输出：MRI range before: 0.0 438.0；MRI range after: 0.0 1.0；Normalized MRI shape: (1, 256, 128)；Normalized MRI dtype: torch.float32；Mask labels after MRI normalization: [0, 1, 2, 3]。仍只处理 case_004_week_0_slice_12 与对应训练 mask。</span>
+- <span style="color: purple;">Codex 真实样本核查：归一化结果全部有限，最小值 0、最大值 1，shape／dtype／CPU device 保留；原始 image_tensor 仍等于原 MRI 数组转换后的 float32 tensor；mask 与原标注逐点数值相同。检查实际通过，脚本退出码为 0。原有预览代码继续显示原数组，没有新增归一化对照图。</span>
+- <span style="color: purple;">Codex 构造的边界核查：全为 5 的 1×2×2 float32 tensor 返回全零，输入保持不变；含 NaN 的小 tensor 抛出 ValueError。两项均通过。这是构造数据上的代码核查，不是额外 MRI 实验、用户亲自操作或模型性能证据。</span>
+- <span style="color: purple;">用户理解状态：三通道单样本 shape 已回答正确；本步等待回答“本片最小值 0、最大值 438，假设某个像素强度为 219，归一化后是多少”。219 是理解题假设值，不声称检查过某个真实像素为 219。</span>
+- <span style="color: purple;">Git 与停止位置：开始本步时最新提交为 41b3497f561c18e6ae09f8a5ad64f57769850d5d；此次仅提交实际脚本与带标记的说明，实际新 hash／时间／作者以 git log 为准。到此停止，不创建补边、batch、Dataset、模型或训练。与报告对应的是预处理选择及实际数值核查、渐进开发证据和 AI 披露。</span>
