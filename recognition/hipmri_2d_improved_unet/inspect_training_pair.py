@@ -8,16 +8,7 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-
-def minmax_normalize(values):
-    if not torch.isfinite(values).all():
-        raise ValueError("MRI intensities must be finite before normalization.")
-    minimum = values.min()
-    maximum = values.max()
-    if maximum == minimum:
-        return torch.zeros_like(values)
-    return (values - minimum) / (maximum - minimum)
-
+from dataset import minmax_normalize
 
 data_root = Path(
     "../../Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data"

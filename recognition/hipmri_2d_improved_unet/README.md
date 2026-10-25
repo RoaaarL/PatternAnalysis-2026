@@ -16,7 +16,7 @@
 - **操作者：** Codex 执行目录、数据文件存在性、运行环境和旧 Git 状态核验，创建本说明及根目录 `.gitignore`，并执行初始提交。Git 使用本地自动化身份 `Codex <codex@local.invalid>`；该保留域名地址只是身份标识，不是用户邮箱。
 - **实际产物：** <span style="color: purple;"><s>仅本说明与必要忽略规则；尚未实现数据读取、模型或训练。</s></span> <span style="color: purple;">起步提交仅包含本说明与必要忽略规则；本次进一步提交固定一对训练文件的读取脚本，尚未实现模型或训练。</span>
 - **Codex 自动核验：** 指定训练 MRI 和 mask 文件均存在且非空；可复用环境能导入 NumPy、NiBabel、PyTorch，且能检测到 GPU。这些检查不是用户亲自完成的检查，也不证明数据内容一致或用户已理解。
-- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；<s>当前等待单样本 tensor 形状的理解回答</s>单样本 tensor 通道轴已回答正确，<s>目前等待 min-max 归一化数值例的回答</s>归一化数值例也已回答正确，目前等待 batch 形状理解问题的回答，不记录为用户亲自运行。</span>
+- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；<s>当前等待单样本 tensor 形状的理解回答</s>单样本 tensor 通道轴已回答正确，<s>目前等待 min-max 归一化数值例的回答</s>归一化数值例也已回答正确，<s>目前等待 batch 形状理解问题的回答</s>batch 与通道数的区别已回答正确，目前等待模块导入与函数复用的理解回答，不记录为用户亲自运行。</span>
 - **Git 记录：** 初始提交的实际 hash、时间、作者及文件列表以 `git log --format=fuller --stat` 为准；不设置过去的提交时间，不改写旧历史。
 
 ## 外部数据与可复用环境
@@ -42,9 +42,9 @@
 
 **工具：** OpenAI Codex，包括用于只读任务书核对的辅助代理。
 
-**本轮具体协助：** 核对任务书第6、14、15、16页的相关要求，核实本地路径、训练文件存在性及可复用运行环境，创建独立仓库、README 和忽略规则，执行初始 Git 提交，并提供第一小步的文件定位讲解。<span style="color: purple;">随后按用户授权运行文件定位命令；本次审阅目录中已有的未提交读取草稿、补充 mask 标签输出、运行固定训练样本并讲解代码，执行本步骤的真实提交。</span> <span style="color: purple;">本步进一步添加并运行同一训练样本的 Matplotlib 并排预览，检查生成图像，记录用户已答对的类别编号问题；未创建后续模型或训练代码。</span> <span style="color: purple;">随后添加同一训练样本的 CPU tensor 转换、mask 转整数前的值检查及形状／类型输出；由 Codex 运行并核验有限值和 mask 逐点数值保留，未代替用户回答理解问题。</span> <span style="color: purple;">本步添加逐片 min-max 归一化小函数，仅用于 MRI tensor；Codex 运行固定训练样本，并额外用构造的常量与 NaN 输入核查边界，记录为代码检查而非 MRI 实验结果。</span> <span style="color: purple;">随后仅添加单样本的 batch 轴及形状输出，由 Codex 核查取出样本后的数值／类型／设备保持，未实现 DataLoader 或训练。</span>
+**本轮具体协助：** 核对任务书第6、14、15、16页的相关要求，核实本地路径、训练文件存在性及可复用运行环境，创建独立仓库、README 和忽略规则，执行初始 Git 提交，并提供第一小步的文件定位讲解。<span style="color: purple;">随后按用户授权运行文件定位命令；本次审阅目录中已有的未提交读取草稿、补充 mask 标签输出、运行固定训练样本并讲解代码，执行本步骤的真实提交。</span> <span style="color: purple;">本步进一步添加并运行同一训练样本的 Matplotlib 并排预览，检查生成图像，记录用户已答对的类别编号问题；未创建后续模型或训练代码。</span> <span style="color: purple;">随后添加同一训练样本的 CPU tensor 转换、mask 转整数前的值检查及形状／类型输出；由 Codex 运行并核验有限值和 mask 逐点数值保留，未代替用户回答理解问题。</span> <span style="color: purple;">本步添加逐片 min-max 归一化小函数，仅用于 MRI tensor；Codex 运行固定训练样本，并额外用构造的常量与 NaN 输入核查边界，记录为代码检查而非 MRI 实验结果。</span> <span style="color: purple;">随后仅添加单样本的 batch 轴及形状输出，由 Codex 核查取出样本后的数值／类型／设备保持，未实现 DataLoader 或训练。</span> <span style="color: purple;">本步将已实现的归一化函数原样移动到新 dataset.py，检查脚本改为导入；Codex 核验本地模块路径、导入行为以及整理前后实际输出和 tensor 一致。</span>
 
-**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，<s>归一化理解仍待用户回答</s>归一化数值例已回答正确，batch 理解仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
+**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，<s>归一化理解仍待用户回答</s>归一化数值例已回答正确，<s>batch 理解仍待用户回答</s>batch 形状理解已回答正确，模块导入理解仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
 
 ## <span style="color: purple;">逐步记录</span>
 
@@ -99,5 +99,15 @@
 - <span style="color: purple;">形状约定：图像为 [B,C,H,W]，类别编号 mask 为 [B,H,W]。当前 B=1、C=1、H=256、W=128；图像形状中的前两个 1 分别表示样本数和通道数，mask 没有增加通道轴。这是手工组成的单样本 batch，不是 DataLoader 或多样本读取。</span>
 - <span style="color: purple;">Codex 实际输出：MRI batch shape: (1, 1, 256, 128)；Mask batch shape: (1, 256, 128)；Batch size: 1。只读取原固定训练样本，既有预览照常生成，脚本经 runpy 执行，退出码为 0。</span>
 - <span style="color: purple;">Codex 核查：图像与 mask 的 batch size 均为 1；取 image_batch[0] 与 mask_batch[0] 后，分别与加轴前的 normalized_image 和 mask_tensor 逐点相等；dtype 和 device 保持。实际输出检查通过。插入轴没有增加第二张图像或新的训练案例。</span>
-- <span style="color: purple;">用户理解状态：归一化数值例已回答正确；本步等待回答“如果以后一个 batch 放两张同样大小的单通道 MRI，图像 batch shape 应是什么”。两张图是理解题假设，本轮没有读取第二张 MRI。上述执行与核查均由 Codex 完成。</span>
+- <span style="color: purple;">用户理解状态：归一化数值例已回答正确；<s>本步等待回答“如果以后一个 batch 放两张同样大小的单通道 MRI，图像 batch shape 应是什么”。</s>用户现已回答：“应该是 (2, 1, 256, 128)，最前面的 2 表示 batch 中有两张图，后面的 1 表示每张图只有一个通道。”Codex 核对为正确，确认 batch 轴与通道轴的区别。两张图是理解题假设，本轮没有读取第二张 MRI。上述执行与核查均由 Codex 完成。</span>
 - <span style="color: purple;">Git 与停止位置：开始本步时最新提交为 3fa20d99c8ad1db9e5b524f89fe033a51d0b856a；此次仅提交实际代码与带标记的说明，实际新 hash／时间／作者以 git log 为准。到此停止，不创建 DataLoader、Dataset、补边、模型或训练。与报告对应的是后续训练输入及目标形状的运行证据、渐进开发记录和 AI 披露。</span>
+
+### <span style="color: purple;">将归一化函数移到 dataset.py（2026-10-25）</span>
+
+- <span style="color: purple;">本步问题：让已验证的数据处理小工具能被其他脚本复用。Codex 新建 dataset.py，仅包含模块说明、torch 导入和原样的 minmax_normalize 函数；inspect_training_pair.py 删除本地重复定义，改用 from dataset import minmax_normalize，调用方式保持不变。</span>
+- <span style="color: purple;">实际代码边界：dataset.py 的顶层不包含 MRI 路径、数据读取、绘图或打印，也没有 Dataset 类。导入该模块提供函数；读取固定样本和保存预览仍由检查脚本执行。本步是代码整理与模块复用，没有新增归一化算法。</span>
+- <span style="color: purple;">Codex 导入核查：明确确认 dataset.__file__ 指向本项目新文件；导入没有打印输出或重写预览。检查程序使用 runpy 时显式加入本项目目录，以保持与直接运行检查脚本时相同的本地模块查找范围。</span>
+- <span style="color: purple;">Codex 行为保持核查：从本重建仓库的上一次提交读取原脚本，与整理后的脚本分别处理同一个固定训练样本；两次标准输出完全一致。函数语法结构保持相同，image_tensor、mask_tensor、normalized_image、image_batch、mask_batch 五个 tensor 逐点值／dtype／device 全部一致。退出码为 0，未调用旧课程项目实现或读取其他训练案例。</span>
+- <span style="color: purple;">实际输出仍为 MRI range before: 0.0 438.0；MRI range after: 0.0 1.0；MRI batch shape: (1, 1, 256, 128)；Mask batch shape: (1, 256, 128)；Batch size: 1；mask 标签 [0, 1, 2, 3]。上述核查由 Codex 执行，不是用户亲自运行。</span>
+- <span style="color: purple;">用户理解状态：batch 与通道轴的区别已回答正确；本步等待回答“假设另一个脚本也需要相同归一化，应复制一份函数还是导入 dataset.py 中已有函数，为什么”。尚不记录为用户已经理解模块导入。</span>
+- <span style="color: purple;">Git 与停止位置：开始本步时最新提交为 54a03cf0b6facd93d3370c2a51dd520a05914adb；仅提交新数据辅助模块、检查脚本的实际整理及带标记的说明，实际新 hash／时间／作者以 git log 为准。与报告对应的是 dataset.py 数据模块的起步及代码组织说明；未实现 Dataset 类、DataLoader、补边、模型或训练。到此停止，等待用户反馈。</span>
