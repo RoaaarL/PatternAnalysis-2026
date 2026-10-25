@@ -16,7 +16,7 @@
 - **操作者：** Codex 执行目录、数据文件存在性、运行环境和旧 Git 状态核验，创建本说明及根目录 `.gitignore`，并执行初始提交。Git 使用本地自动化身份 `Codex <codex@local.invalid>`；该保留域名地址只是身份标识，不是用户邮箱。
 - **实际产物：** <span style="color: purple;"><s>仅本说明与必要忽略规则；尚未实现数据读取、模型或训练。</s></span> <span style="color: purple;">起步提交仅包含本说明与必要忽略规则；本次进一步提交固定一对训练文件的读取脚本，尚未实现模型或训练。</span>
 - **Codex 自动核验：** 指定训练 MRI 和 mask 文件均存在且非空；可复用环境能导入 NumPy、NiBabel、PyTorch，且能检测到 GPU。这些检查不是用户亲自完成的检查，也不证明数据内容一致或用户已理解。
-- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，目前等待可视化理解问题的回答，不记录为用户亲自运行。</span>
+- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；当前等待单样本 tensor 形状的理解回答，不记录为用户亲自运行。</span>
 - **Git 记录：** 初始提交的实际 hash、时间、作者及文件列表以 `git log --format=fuller --stat` 为准；不设置过去的提交时间，不改写旧历史。
 
 ## 外部数据与可复用环境
@@ -28,7 +28,7 @@
 - 对应训练 mask：`keras_slices_seg_train/seg_004_week_0_slice_12.nii.gz`
 - 实际可复用解释器：`recognition/hipmri_2d_improved_unet/.venv/Scripts/python.exe`
 - 原先指定的 `course-git/PatternAnalysis-2026/recognition/hipmri_2d_improved_unet/.venv/Scripts/python.exe` 不存在；本轮未安装或改动任何依赖。
-- 已验证：Python 3.13.2；NumPy 2.5.4；NiBabel 5.4.2；PyTorch 2.11.0+cu128；CUDA 可用；NVIDIA GeForce RTX 4070 Ti。仅验证导入与设备检测，未进行张量计算或训练。
+- 已验证：Python 3.13.2；NumPy 2.5.4；NiBabel 5.4.2；PyTorch 2.11.0+cu128；CUDA 可用；NVIDIA GeForce RTX 4070 Ti。<span style="color: purple;"><s>仅验证导入与设备检测，未进行张量计算或训练。</s>起步阶段仅验证导入与设备检测；当前已经在 CPU 完成固定样本的 tensor 转换与核查，尚未进行模型计算或训练。</span>
 
 ## 课程要求与评估边界
 
@@ -42,9 +42,9 @@
 
 **工具：** OpenAI Codex，包括用于只读任务书核对的辅助代理。
 
-**本轮具体协助：** 核对任务书第6、14、15、16页的相关要求，核实本地路径、训练文件存在性及可复用运行环境，创建独立仓库、README 和忽略规则，执行初始 Git 提交，并提供第一小步的文件定位讲解。<span style="color: purple;">随后按用户授权运行文件定位命令；本次审阅目录中已有的未提交读取草稿、补充 mask 标签输出、运行固定训练样本并讲解代码，执行本步骤的真实提交。</span> <span style="color: purple;">本步进一步添加并运行同一训练样本的 Matplotlib 并排预览，检查生成图像，记录用户已答对的类别编号问题；未创建后续模型或训练代码。</span>
+**本轮具体协助：** 核对任务书第6、14、15、16页的相关要求，核实本地路径、训练文件存在性及可复用运行环境，创建独立仓库、README 和忽略规则，执行初始 Git 提交，并提供第一小步的文件定位讲解。<span style="color: purple;">随后按用户授权运行文件定位命令；本次审阅目录中已有的未提交读取草稿、补充 mask 标签输出、运行固定训练样本并讲解代码，执行本步骤的真实提交。</span> <span style="color: purple;">本步进一步添加并运行同一训练样本的 Matplotlib 并排预览，检查生成图像，记录用户已答对的类别编号问题；未创建后续模型或训练代码。</span> <span style="color: purple;">随后添加同一训练样本的 CPU tensor 转换、mask 转整数前的值检查及形状／类型输出；由 Codex 运行并核验有限值和 mask 逐点数值保留，未代替用户回答理解问题。</span>
 
-**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，可视化理解核查仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
+**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，tensor 理解核查仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
 
 ## <span style="color: purple;">逐步记录</span>
 
@@ -70,5 +70,15 @@
 - <span style="color: purple;">运行环境处理：首次绘图出现用户目录字体缓存写入权限提示，图像仍正常生成；随后将 MPLCONFIGDIR 指向本仓库已忽略的 outputs/.matplotlib，并设置 MPLBACKEND=Agg 后重新运行，未再出现该提示。未安装依赖或修改原环境。</span>
 - <span style="color: purple;">Codex 核查：已打开生成的 PNG，确认标题、两幅图像及离散标签色条可读。灰度映射只调整显示效果；未做训练归一化、补边或类别重编码。相同显示设置不能证明解剖方向或空间对齐，右侧是数据自带参考标注，不是模型预测。</span>
 - <span style="color: purple;">Git 与文件边界：PNG 和绘图缓存留在已忽略的 outputs/，不提交数据衍生图像。此次仅提交代码和本说明；开始本步时最新提交为 61cb632497af466b23267256a9efd85653bcd483，实际新 hash、时间及操作者以 git log 为准。</span>
-- <span style="color: purple;">用户理解状态：上一步“类别编号不是亮度”已回答正确；本步等待回答“如果把类别 2 的显示颜色从天蓝改成红色，mask 中的数值是否也需要改变，为什么”。预览生成与图像查看由 Codex 完成，尚不记录为用户已查看并认可图像。</span>
+- <span style="color: purple;">用户理解状态：上一步“类别编号不是亮度”已回答正确；<s>本步等待回答“如果把类别 2 的显示颜色从天蓝改成红色，mask 中的数值是否也需要改变，为什么”。</s>用户现已回答：“不需要修改 mask 的数值，颜色只是显示方式，类别编号不变。”Codex 核对为正确，确认的是配色与标注编号的区别。预览生成与图像查看由 Codex 完成，尚不记录为用户已查看并认可图像。</span>
 - <span style="color: purple;">与报告对应：这是后续数据检查、可视化说明和 AI 使用披露的实际证据；目前没有模型、预测结果、性能指标或对齐验证结论。到此停止，等待用户反馈。</span>
+
+### <span style="color: purple;">把固定训练样本转成 CPU tensor（2026-10-25）</span>
+
+- <span style="color: purple;">本步问题：将已读取的 NumPy 数组转换为后续 PyTorch 数据模块可用的单样本形式。Codex 只在现有脚本中添加 torch 导入、mask 有限且为整数值的检查、两行 tensor 转换以及输出；仍只读取固定训练文件。</span>
+- <span style="color: purple;">代码约定：image_tensor 使用 torch.float32 并通过 unsqueeze(0) 添加一个灰度通道轴；mask_tensor 使用 torch.long（即 torch.int64），保持二维，每个位置一个类别编号。两者均在 CPU，尚无 batch 轴。MRI 的 float64 到 float32 转换可能产生有限精度舍入，不是归一化；空间大小保持不变。</span>
+- <span style="color: purple;">转换保护：先检查 mask 数值有限且等于向下取整后的自身，再转为整数。这样可拒绝异常的非整数标签，而不是把假设的 1.7 静默转成 1；当前片仍仅观察到 0、1、2、3。</span>
+- <span style="color: purple;">Codex 实际输出：MRI tensor shape: (1, 256, 128)；MRI tensor dtype: torch.float32；Mask tensor shape: (256, 128)；Mask tensor dtype: torch.int64；Mask tensor labels: [0, 1, 2, 3]。脚本经 runpy 在独立 Python 进程中执行，退出码为 0，原有预览也按现有代码重新生成。</span>
+- <span style="color: purple;">Codex 额外核查：两个 tensor 均在 CPU；MRI tensor 所有数值有限；mask_tensor 转回 NumPy 后与原 mask 逐点数值相等。实际输出为 Codex checks: CPU tensors, finite MRI tensor, exact mask values: PASS。这些不是用户亲自完成的检查。</span>
+- <span style="color: purple;">用户理解状态：显示颜色不改变类别编号已回答正确；本步等待回答“假设单张图有三个通道，空间大小仍是 256×128，它的单样本 tensor shape 应是什么”。尚不记录为用户已理解全部 tensor 代码。</span>
+- <span style="color: purple;">Git 与停止位置：开始本步时最新提交为 71d4075fc25902e80ab97e4898ec938bbc87ac9e；本步只提交实际代码和带标记的说明，实际 hash、时间和操作者以 git log 为准。不保存 tensor 数据，不创建 Dataset／batch／归一化／补边／模型或训练。与报告对应的是数据模块输入形状和类型的实际运行证据、渐进记录及 AI 披露。</span>

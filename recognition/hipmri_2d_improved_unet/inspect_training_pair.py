@@ -1,9 +1,10 @@
-"""Read and preview one training pair; run from the guided repository root."""
+"""Inspect one training pair as arrays and tensors; run from the repository root."""
 
 from pathlib import Path
 
 import nibabel as nib
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
@@ -19,6 +20,18 @@ mask = nib.load(mask_path).get_fdata()
 print("MRI shape:", image.shape)
 print("Mask shape:", mask.shape)
 print("Mask labels:", np.unique(mask))
+
+if not np.isfinite(mask).all() or not np.equal(mask, np.floor(mask)).all():
+    raise ValueError("Mask values must be finite integers before casting.")
+
+image_tensor = torch.from_numpy(image).to(torch.float32).unsqueeze(0)
+mask_tensor = torch.from_numpy(mask).to(torch.long)
+
+print("MRI tensor shape:", tuple(image_tensor.shape))
+print("MRI tensor dtype:", image_tensor.dtype)
+print("Mask tensor shape:", tuple(mask_tensor.shape))
+print("Mask tensor dtype:", mask_tensor.dtype)
+print("Mask tensor labels:", torch.unique(mask_tensor).tolist())
 
 # These four display colors cover the labels observed in this fixed slice.
 mask_colors = ListedColormap(["black", "gold", "deepskyblue", "magenta"])
