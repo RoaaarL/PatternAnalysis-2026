@@ -9,7 +9,13 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from dataset import HipMRIPairDataset, collect_pairs
+from dataset import (
+    IGNORE_INDEX,
+    HipMRIPairDataset,
+    collate_padded,
+    collect_pairs,
+    crop_to_original,
+)
 
 data_root = Path(
     "../../Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data"
@@ -32,12 +38,16 @@ training_dataset = HipMRIPairDataset(training_pairs)
 print("Dataset samples:", len(training_dataset))
 print("Reference list index:", reference_index)
 reference_loader = DataLoader(
-    training_dataset, batch_size=1, sampler=[reference_index], num_workers=0
+    training_dataset, batch_size=1, sampler=[reference_index], num_workers=0,
+    collate_fn=collate_padded,
 )
 print("Reference loader batches:", len(reference_loader))
-image_batch, mask_batch = next(iter(reference_loader))
-normalized_image = image_batch[0]
-mask_tensor = mask_batch[0]
+batch = next(iter(reference_loader))
+image_batch, mask_batch = batch["image"], batch["target"]
+valid_batch = batch["valid_mask"]
+original_size = batch["original_sizes"][0]
+normalized_image = crop_to_original(image_batch[0], original_size)
+mask_tensor = crop_to_original(mask_batch[0], original_size)
 
 print("MRI range before:", image.min().item(), image.max().item())
 print("MRI range after:", normalized_image.min().item(), normalized_image.max().item())
@@ -50,6 +60,10 @@ print("Mask labels after MRI normalization:", torch.unique(mask_tensor).tolist()
 print("MRI batch shape:", tuple(image_batch.shape))
 print("Mask batch shape:", tuple(mask_batch.shape))
 print("Batch size:", image_batch.shape[0])
+print("Original size:", original_size)
+print("Valid pixels:", valid_batch.sum().item())
+print("Padding pixels:", valid_batch.numel() - valid_batch.sum().item())
+print("Padding target ignore index:", IGNORE_INDEX)
 
 # These four display colors cover the labels observed in this fixed slice.
 mask_colors = ListedColormap(["black", "gold", "deepskyblue", "magenta"])

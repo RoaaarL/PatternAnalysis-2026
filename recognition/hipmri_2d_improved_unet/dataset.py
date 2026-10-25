@@ -6,7 +6,11 @@ import re
 import nibabel as nib
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset
+
+IGNORE_INDEX = -100
+DEFAULT_MULTIPLE = 16
 
 
 def minmax_normalize(values):
@@ -16,20 +20,94 @@ def minmax_normalize(values):
     maximum = values.max()
     if maximum == minimum:
         return torch.zeros_like(values)
+    if not torch.isfinite(maximum - minimum):
+        raise ValueError("MRI normalization range must be finite.")
     return (values - minimum) / (maximum - minimum)
 
 
-def load_pair(image_path, mask_path):
-    """Load one already-paired 2D MRI/mask as normalized image and class IDs."""
+def preprocess_pair(image, target, multiple=DEFAULT_MULTIPLE):
+    """Normalize, then pad bottom/right; every original pixel remains valid."""
+    if not isinstance(multiple, int) or isinstance(multiple, bool) or multiple <= 0:
+        raise ValueError("Padding multiple must be a positive integer.")
+    if image.ndim != 3 or target.ndim != 2 or image.shape[0] != 1:
+        raise ValueError("Expected a single-channel [1,H,W] image and [H,W] target.")
+    if image.shape[-2:] != target.shape or min(target.shape) == 0:
+        raise ValueError("Image and target must have matching nonempty spatial shapes.")
+    if not image.is_floating_point() or target.dtype != torch.long:
+        raise TypeError("Expected floating-point image and int64 class-ID target.")
+    if image.device != target.device or (target < 0).any():
+        raise ValueError("Image/target must share a device; original class IDs must be nonnegative.")
+    normalized = minmax_normalize(image.to(torch.float32))
+    height, width = target.shape
+    padding = (0, (-width) % multiple, 0, (-height) % multiple)
+    valid = torch.ones_like(target, dtype=torch.bool)
+    return {
+        "image": F.pad(normalized, padding, value=0),
+        "target": F.pad(target, padding, value=IGNORE_INDEX),
+        "valid_mask": F.pad(valid, padding, value=False),
+        "original_size": (height, width),
+    }
+
+
+def collate_padded(samples):
+    """Stack mixed-size samples, preserving each sample's existing valid region."""
+    if not samples:
+        raise ValueError("Cannot collate an empty sample list.")
+    height = max(sample["target"].shape[0] for sample in samples)
+    width = max(sample["target"].shape[1] for sample in samples)
+    images, targets, valid_masks = [], [], []
+    for sample in samples:
+        image, target, valid = sample["image"], sample["target"], sample["valid_mask"]
+        if image.shape[-2:] != target.shape or valid.shape != target.shape:
+            raise ValueError("Sample image, target and valid_mask shapes must match.")
+        if target.dtype != torch.long or valid.dtype != torch.bool:
+            raise TypeError("Expected int64 target and boolean valid_mask.")
+        if (target[valid] < 0).any() or (target[~valid] != IGNORE_INDEX).any():
+            raise ValueError("Only invalid padded pixels may contain the ignore index.")
+        padding = (0, width - target.shape[1], 0, height - target.shape[0])
+        images.append(F.pad(image, padding, value=0))
+        targets.append(F.pad(target, padding, value=IGNORE_INDEX))
+        valid_masks.append(F.pad(valid, padding, value=False))
+    return {
+        "image": torch.stack(images),
+        "target": torch.stack(targets),
+        "valid_mask": torch.stack(valid_masks),
+        "original_sizes": [sample["original_size"] for sample in samples],
+    }
+
+
+def crop_to_original(values, original_size):
+    """Restore a single sample's original spatial extent without interpolation."""
+    height, width = original_size
+    if height <= 0 or width <= 0 or height > values.shape[-2] or width > values.shape[-1]:
+        raise ValueError("Original size must fit within the padded tensor.")
+    return values[..., :height, :width]
+
+
+def valid_pixels(prediction, target, valid_mask):
+    """Select class IDs only; padding cannot enter Dice/IoU pixel counts."""
+    if prediction.shape != target.shape or valid_mask.shape != target.shape:
+        raise ValueError("Prediction, target and valid_mask must have the same shape.")
+    if valid_mask.dtype != torch.bool:
+        raise TypeError("valid_mask must be boolean.")
+    if (target[valid_mask] < 0).any():
+        raise ValueError("Valid pixels must contain nonnegative class IDs.")
+    return prediction[valid_mask], target[valid_mask]
+
+
+def load_pair(image_path, mask_path, multiple=DEFAULT_MULTIPLE):
+    """Read an already-paired MRI/mask and return a preprocessed sample dictionary."""
     image = nib.load(image_path).get_fdata()
     mask = nib.load(mask_path).get_fdata()
     if image.ndim != 2 or image.shape != mask.shape:
         raise ValueError("Expected matching 2D MRI and mask shapes.")
     if not np.isfinite(mask).all() or not np.equal(mask, np.floor(mask)).all():
         raise ValueError("Mask values must be finite integers before casting.")
+    if (mask < 0).any():
+        raise ValueError("Original mask class IDs must be nonnegative.")
     image_tensor = torch.from_numpy(image).to(torch.float32).unsqueeze(0)
     mask_tensor = torch.from_numpy(mask).to(torch.long)
-    return minmax_normalize(image_tensor), mask_tensor
+    return preprocess_pair(image_tensor, mask_tensor, multiple=multiple)
 
 
 def collect_pairs(image_dir, mask_dir):
@@ -70,12 +148,13 @@ def patient_ids(pairs):
 class HipMRIPairDataset(Dataset):
     """Load single samples from a caller-verified list of MRI/mask path pairs."""
 
-    def __init__(self, pairs):
+    def __init__(self, pairs, multiple=DEFAULT_MULTIPLE):
         self.pairs = list(pairs)
+        self.multiple = multiple
 
     def __len__(self):
         return len(self.pairs)
 
     def __getitem__(self, index):
         image_path, mask_path = self.pairs[index]
-        return load_pair(image_path, mask_path)
+        return load_pair(image_path, mask_path, multiple=self.multiple)

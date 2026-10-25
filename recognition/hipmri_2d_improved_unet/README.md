@@ -16,7 +16,7 @@
 - **操作者：** Codex 执行目录、数据文件存在性、运行环境和旧 Git 状态核验，创建本说明及根目录 `.gitignore`，并执行初始提交。Git 使用本地自动化身份 `Codex <codex@local.invalid>`；该保留域名地址只是身份标识，不是用户邮箱。
 - **实际产物：** <span style="color: purple;"><s>仅本说明与必要忽略规则；尚未实现数据读取、模型或训练。</s></span> <span style="color: purple;">起步提交仅包含本说明与必要忽略规则；本次进一步提交固定一对训练文件的读取脚本，尚未实现模型或训练。</span>
 - **Codex 自动核验：** 指定训练 MRI 和 mask 文件均存在且非空；可复用环境能导入 NumPy、NiBabel、PyTorch，且能检测到 GPU。这些检查不是用户亲自完成的检查，也不证明数据内容一致或用户已理解。
-- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；<s>当前等待单样本 tensor 形状的理解回答</s>单样本 tensor 通道轴已回答正确，<s>目前等待 min-max 归一化数值例的回答</s>归一化数值例也已回答正确，<s>目前等待 batch 形状理解问题的回答</s>batch 与通道数的区别已回答正确，<s>目前等待模块导入与函数复用的理解回答</s>函数复用理由已回答正确，<s>目前等待单样本读取函数返回顺序的理解回答</s>返回顺序已回答正确，<s>目前等待 Dataset 按编号取样的理解回答</s>Dataset 按编号取样已回答正确，<s>目前等待 DataLoader 分批数量的理解回答</s>DataLoader 分批已回答正确，<s>目前等待文件名逐对核查的理解回答</s>文件名逐对核查已回答正确，<s>目前等待患者分组独立性的理解回答</s>case 分组独立性已回答正确，目前等待 sampler 索引与病例编号区别的理解回答，不记录为用户亲自运行。</span>
+- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；<s>当前等待单样本 tensor 形状的理解回答</s>单样本 tensor 通道轴已回答正确，<s>目前等待 min-max 归一化数值例的回答</s>归一化数值例也已回答正确，<s>目前等待 batch 形状理解问题的回答</s>batch 与通道数的区别已回答正确，<s>目前等待模块导入与函数复用的理解回答</s>函数复用理由已回答正确，<s>目前等待单样本读取函数返回顺序的理解回答</s>返回顺序已回答正确，<s>目前等待 Dataset 按编号取样的理解回答</s>Dataset 按编号取样已回答正确，<s>目前等待 DataLoader 分批数量的理解回答</s>DataLoader 分批已回答正确，<s>目前等待文件名逐对核查的理解回答</s>文件名逐对核查已回答正确，<s>目前等待患者分组独立性的理解回答</s>case 分组独立性已回答正确，<s>目前等待 sampler 索引与病例编号区别的理解回答</s>用户要求改按完整功能里程碑推进；该索引题未作答，不记为已理解，也不再作为推进门槛，不记录为用户亲自运行。</span>
 - **Git 记录：** 初始提交的实际 hash、时间、作者及文件列表以 `git log --format=fuller --stat` 为准；不设置过去的提交时间，不改写旧历史。
 
 ## 外部数据与可复用环境
@@ -56,7 +56,9 @@
 
 <span style="color: purple;">本步具体协助：Codex 将完整训练路径清单传给 Dataset，并为固定参考样本构造只含一条索引的参考 DataLoader；核对惰性构造、实际读取范围及与前一步的 tensor 一致性，没有遍历全量图像或训练。</span>
 
-**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，<s>归一化理解仍待用户回答</s>归一化数值例已回答正确，<s>batch 理解仍待用户回答</s>batch 形状理解已回答正确，<s>模块导入理解仍待用户回答</s>函数复用理由已回答正确，<s>load_pair 返回顺序的理解仍待用户回答</s>返回顺序已回答正确，<s>Dataset 按编号取样的理解仍待用户回答</s>Dataset 按编号取样已回答正确，<s>DataLoader 分批理解仍待用户回答</s>DataLoader 分批已回答正确，<s>文件名配对核查的理解仍待用户回答</s>文件名配对核查已回答正确，<s>患者分组独立性的理解仍待用户回答</s>case 分组独立性已回答正确，sampler 索引选择的理解仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
+<span style="color: purple;">本里程碑新增协助：Codex 完成归一化、按16倍数向下／向右补边、有效区域与原尺寸记录、混合尺寸batch整理、原尺寸裁回及有效像素选择；编写构造检查和仅训练／验证的全量预处理审计。所有自动检查均由 Codex 执行，不作为用户亲自运行或理解的证明。</span>
+
+**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，<s>归一化理解仍待用户回答</s>归一化数值例已回答正确，<s>batch 理解仍待用户回答</s>batch 形状理解已回答正确，<s>模块导入理解仍待用户回答</s>函数复用理由已回答正确，<s>load_pair 返回顺序的理解仍待用户回答</s>返回顺序已回答正确，<s>Dataset 按编号取样的理解仍待用户回答</s>Dataset 按编号取样已回答正确，<s>DataLoader 分批理解仍待用户回答</s>DataLoader 分批已回答正确，<s>文件名配对核查的理解仍待用户回答</s>文件名配对核查已回答正确，<s>患者分组独立性的理解仍待用户回答</s>case 分组独立性已回答正确，<s>sampler 索引选择的理解仍待用户回答</s>该题未作答；现按用户指定的功能里程碑完成代码、自动检查及整体讲解。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
 
 ## <span style="color: purple;">逐步记录</span>
 
@@ -186,3 +188,59 @@
 - <span style="color: purple;">Codex 读取范围核查：只在单独构造与运行参考 loader 的范围内计数。完整 Dataset、loader 和 iterator 构造均未读取 NIfTI；第一次 next 恰好读取固定 MRI 和 mask 两个路径，随后同一迭代器结束且未增加读取。原图预览和前后版本比较会重复读取同一对文件，因此不把整个核查进程描述成总共只读两次。</span>
 - <span style="color: purple;">当前限制与用户理解：case 分组独立性已回答正确；本步等待回答“若以后参考切片在清单中的位置变为 7，而 case 编号仍为 004，sampler 应选哪个数字，为什么”。7 是理解题假设，本次真实位置仍是 4。其余训练切片的内容尚未逐个读取验证；以上运行由 Codex 执行。</span>
 - <span style="color: purple;">Git 与停止位置：开始本步时最新提交为 b0f914effb89d241640470c992bd619125a37c3a；只提交实际检查脚本及带标记说明，不提交完整路径清单或数据，实际新 hash／时间／作者以 git log 为准。与报告对应的是完整清单的 Dataset 接口和固定参考 batch 的运行证据；未改划分，未做全量像素检查、补边、模型或训练。到此停止，等待用户反馈。</span>
+
+## <span style="color: purple;">协作粒度调整：从本里程碑开始</span>
+
+<span style="color: purple;">用户指出此前拆分过细，要求按真实功能里程碑推进。已有14次真实提交全部保留，不合并、重写或包装成更早的开发历史。以后每组功能完成代码、必要检查和整体讲解后提交，不再按单个方法／一行代码生成提交或强制理解题。此前未回答的 sampler 索引题保持未回答状态。</span>
+
+<table style="color: purple;">
+<tr><th>里程碑</th><th>提交应体现的真实工作</th></tr>
+<tr><td>读取并配对 MRI／mask</td><td>数据读取、逐名配对与检查</td></tr>
+<tr><td>归一化、补边和有效区域</td><td>完整预处理接口、批次整理及实际检查结果</td></tr>
+<tr><td>baseline U-Net</td><td>模型及最小训练流程</td></tr>
+<tr><td>Improved U-Net</td><td>新增模块、接入过程及验证</td></tr>
+<tr><td>发现并修复问题</td><td>实际错误、修改原因和验证；不制造故障记录</td></tr>
+<tr><td>公平实验与报告</td><td>验证集选模型、冻结后安排有效评估边界、结果分析；不称旧测试集为未见盲测</td></tr>
+</table>
+
+<span style="color: purple;">本轮仅推进预处理里程碑；baseline、Improved 模型和实验留在各自后续里程碑。实际 tutor check-off 状态仍未完成，重新实现不保证 originality hurdle 通过。</span>
+
+## <span style="color: purple;">预处理里程碑：接口与设计</span>
+
+<span style="color: purple;">归一化函数此前已在真实提交 3fa20d9 中形成；本次复用该实现并补齐补边、有效区域、混合尺寸 batch 与恢复原尺寸。以下是本实现的选择，不写成课程指定方案或已验证的最优 MRI 方案。</span>
+
+- <span style="color: purple;">顺序：先对每张 MRI 独立做 min-max 归一化，再向下／向右补到 16 的倍数，不缩放、不转置原始区域。16 为后续四次 2 倍下采样的当前架构规划，可通过参数修改；不是由测试集表现选出的值。常量图归一化为零，非有限数值或非有限强度跨度报错。</span>
+- <span style="color: purple;">原始 mask 必须是有限、非负整数类别编号；不做强度归一化或重编码。原始负标签（包括 -100）会报错，不能将数据问题默认为补边。</span>
+- <span style="color: purple;">补边规则：image=0；target=-100（IGNORE_INDEX）；valid_mask=False。所有原始像素的 valid_mask=True，包括背景类别0、黑色像素及常量图。这一有效区域不是器官前景掩码。</span>
+- <span style="color: purple;">新的单样本接口是字典：image 为 float32 [1,Hpad,Wpad]；target 为 int64 [Hpad,Wpad]；valid_mask 为 bool [Hpad,Wpad]；original_size 保存补边前 (H,W)。原先的二值 tuple 接口已在本次真实代码修改中替换，历史讲解作为当时状态保留。</span>
+- <span style="color: purple;">collate_padded 将混合尺寸样本继续补到本批最大尺寸，并保留每个样本已有 valid_mask；batch 返回 image、target、valid_mask、original_sizes。不能把样本先前补过的区域重新标为有效。crop_to_original 按最后两维裁回原尺寸，不插值；valid_pixels 只选有效位置供后续指标使用。</span>
+- <span style="color: purple;">后续损失与指标契约：CE 必须使用 ignore_index=-100；Dice／IoU 必须排除 valid_mask=False 的位置，不能直接对含 -100 的 target 做 one-hot。本次仅用构造 logits 验证 CE 忽略行为，没有新增模型、训练或真实 Dice／IoU 成绩。</span>
+- <span style="color: purple;">当前调用链只接收本项目 preprocess_pair 生成的样本字典；collate 和有效像素函数信任上游的部分 rank／device／元数据约定。若接入其他数据源，须重新核查接口，不能扩大为任意输入均已覆盖。</span>
+
+### <span style="color: purple;">本次可复现命令（从独立仓库根目录运行）</span>
+
+<span style="color: purple;">下面新增的是可执行命令示例，不把彩色 HTML 写进命令，以保持可直接运行；变更由 Git diff 展示。</span>
+
+```powershell
+$python = '..\..\recognition\hipmri_2d_improved_unet\.venv\Scripts\python.exe'
+$env:PYTHONDONTWRITEBYTECODE = '1'
+& $python -B -m unittest discover -s recognition/hipmri_2d_improved_unet/tests -v
+& $python -B recognition/hipmri_2d_improved_unet/audit_preprocessing.py
+$env:MPLBACKEND = 'Agg'
+$env:MPLCONFIGDIR = Join-Path $PWD 'outputs/.matplotlib'
+& $python -B recognition/hipmri_2d_improved_unet/inspect_training_pair.py
+```
+
+<span style="color: purple;">全量审计仅处理训练与验证；带 --limit 的试跑会被标为 passed_limited，不能当作完整检查。原始机器报告保存在忽略的 outputs/；本里程碑提交另保存不含本机数据路径或数据文件的汇总证据。构造测试、真实数据审计与用户理解分别记录。</span>
+
+### <span style="color: purple;">预处理里程碑完成记录（2026-10-25）</span>
+
+- <span style="color: purple;">实际改动：归一化后补边、valid_mask／original_size、混合尺寸 collate、有效像素选择及裁回原尺寸均已接入 Dataset 和参考 DataLoader。新增可复现 unittest 与仅训练／验证的流式 audit。已有14次真实提交未改写；本组完成后再产生一次里程碑提交，实际 hash／时间／作者以 git log 为准，开始本组时 HEAD 为 502ef03480ccee30bc4e3d9842aa5342d7e0077c。</span>
+- <span style="color: purple;">构造与集成检查：12项 unittest 全部通过、0项跳过。其中构造检查验证17×19补至32×32、323个有效像素、701个补边像素；全背景／常量图仍保留原始有效像素；非法输入拒绝；混合尺寸二次补边不覆盖 valid；crop 与原标签相等；改变 padding 处 logits／预测不改变忽略补边的 CE 或有效像素选择。构造 logits 不属于模型训练或真实分割成绩。</span>
+- <span style="color: purple;">全量真实数据审计：单次完整运行总耗时320.898秒；训练11460/11460、验证660/660路径对均通过，0错误，all_pairs_attempted=true，status=passed_full。两侧实际标签集合均为[0,1,2,3,4,5]，归一化汇总范围[0,1]；case分组31/4、交集为空，仍是文件名代理核查。没有读取测试集或用已知旧测试结果调参。</span>
+- <span style="color: purple;">实际尺寸发现：训练256×128为11400对、256×144为60对；验证660对均256×128。两种真实原尺寸均能整除16，所以逐图补边数量为0；不能将构造的17×19补边例写成真实 MRI 数据分布。训练有效像素375767040、验证21626880，逐图新增padding像素均0。</span>
+- <span style="color: purple;">真实混合batch核查：固定参考case_004_week_0_slice_12(256×128)与case_019_week_1_slice_0(256×144)组成一批。默认collate在本次对照核查中实际报尺寸不一致；自定义collate得到[2,1,256,144]，两条valid像素数为[32768,36864]，补边像素数[4096,0]；padding target=-100、image=0、裁回后target逐点等于原NIfTI标签。该检查已加入可复现的本地数据集成测试；缺少本地数据时会明确skip。本轮没有将其包装成此前训练曾失败的历史。</span>
+- <span style="color: purple;">固定参考：原始256×128、32768个有效像素、0补边，图像范围仍0～1，参考图标签仍[0,1,2,3]；已查看预览。包含该样本的完整 Dataset 仍按需读取，未开始训练。混合batch所用第二张图只用于本里程碑的数据接口核查。</span>
+- <span style="color: purple;">证据：evidence/preprocessing_audit.json 保存去掉本机绝对数据路径的汇总、真实混合batch结果和源文件SHA256，不含图像／tensor／完整患者清单。原始机器报告 outputs/preprocessing_audit.json、限量试跑及预览仍留在忽略目录；限量试跑未被当作全量结果。审计源码在完整运行开始后未修改。</span>
+- <span style="color: purple;">证据边界：所有代码编写、自动检查、全量审计和本次提交均由 Codex 执行。用户本轮只调整了协作粒度，尚未确认已理解整组预处理，不记为亲自运行或通过原创性审查。审计检查的是处理契约，不独立证明真实身份映射、物理空间对应或标注医学准确度，也不构成模型性能结果。</span>
+- <span style="color: purple;">当前里程碑到此完成；下一组是 baseline U-Net 及最小训练流程，本轮没有生成或运行模型、优化器、训练与测试评估。原项目、原PR、原历史不变，实际 tutor check-off 仍未完成。</span>
