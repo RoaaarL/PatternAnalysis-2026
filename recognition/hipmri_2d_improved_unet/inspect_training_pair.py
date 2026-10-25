@@ -8,7 +8,7 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from dataset import minmax_normalize
+from dataset import load_pair
 
 data_root = Path(
     "../../Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data"
@@ -23,23 +23,14 @@ print("MRI shape:", image.shape)
 print("Mask shape:", mask.shape)
 print("Mask labels:", np.unique(mask))
 
-if not np.isfinite(mask).all() or not np.equal(mask, np.floor(mask)).all():
-    raise ValueError("Mask values must be finite integers before casting.")
+normalized_image, mask_tensor = load_pair(image_path, mask_path)
 
-image_tensor = torch.from_numpy(image).to(torch.float32).unsqueeze(0)
-mask_tensor = torch.from_numpy(mask).to(torch.long)
-
-print("MRI tensor shape:", tuple(image_tensor.shape))
-print("MRI tensor dtype:", image_tensor.dtype)
-print("Mask tensor shape:", tuple(mask_tensor.shape))
-print("Mask tensor dtype:", mask_tensor.dtype)
-print("Mask tensor labels:", torch.unique(mask_tensor).tolist())
-
-normalized_image = minmax_normalize(image_tensor)
-print("MRI range before:", image_tensor.min().item(), image_tensor.max().item())
+print("MRI range before:", image.min().item(), image.max().item())
 print("MRI range after:", normalized_image.min().item(), normalized_image.max().item())
 print("Normalized MRI shape:", tuple(normalized_image.shape))
 print("Normalized MRI dtype:", normalized_image.dtype)
+print("Mask tensor shape:", tuple(mask_tensor.shape))
+print("Mask tensor dtype:", mask_tensor.dtype)
 print("Mask labels after MRI normalization:", torch.unique(mask_tensor).tolist())
 
 image_batch = normalized_image.unsqueeze(0)
