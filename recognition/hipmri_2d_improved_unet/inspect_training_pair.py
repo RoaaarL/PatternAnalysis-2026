@@ -51,6 +51,13 @@ print("Normalized MRI shape:", tuple(normalized_image.shape))
 print("Normalized MRI dtype:", normalized_image.dtype)
 print("Mask labels after MRI normalization:", torch.unique(mask_tensor).tolist())
 
+image_batch = normalized_image.unsqueeze(0)
+mask_batch = mask_tensor.unsqueeze(0)
+
+print("MRI batch shape:", tuple(image_batch.shape))
+print("Mask batch shape:", tuple(mask_batch.shape))
+print("Batch size:", image_batch.shape[0])
+
 # These four display colors cover the labels observed in this fixed slice.
 mask_colors = ListedColormap(["black", "gold", "deepskyblue", "magenta"])
 fig, axes = plt.subplots(1, 2, figsize=(8, 6), layout="constrained")
