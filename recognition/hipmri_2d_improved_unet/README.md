@@ -1,0 +1,45 @@
+# HipMRI 2D Improved U-Net (Normal): guided rebuild
+
+## 来源与范围
+
+这是从 2026-10-25 开始、基于既有学习和旧案例、由 Codex 辅助的逐步重新实现。用户此前已经接触完整旧实现及实验结果；本记录不代表首次独立开发，也不补造旧项目的早期渐进开发历史。重新实现能否满足 originality hurdle 仍须由教学团队判断。
+
+旧课程仓库：`../PatternAnalysis-2026`（相对本仓库根目录）。旧 PR：<https://github.com/shakes76/PatternAnalysis-2026/pull/20>。旧仓库当前 HEAD 为 `82c794f55bb935cc40f92de990bfcd9165b2361d`；本轮开始时工作树干净。本仓库独立创建，没有复制旧实现、旧结果或旧 Git 历史，也未配置远程仓库。
+
+本仓库沿用课程的 `recognition/hipmri_2d_improved_unet/` 结构，便于日后另行授权的真实提交集成。目前不发布新 PR，也不修改或替换旧 PR。
+
+## 本轮实际完成：起步
+
+- **原因：** 为后续每个真实小步骤建立可审查的独立 Git 记录。
+- **操作者：** Codex 执行目录、数据文件存在性、运行环境和旧 Git 状态核验，创建本说明及根目录 `.gitignore`，并执行初始提交。Git 使用本地自动化身份 `Codex <codex@local.invalid>`；该保留域名地址只是身份标识，不是用户邮箱。
+- **实际产物：** 仅本说明与必要忽略规则；尚未实现数据读取、模型或训练。
+- **Codex 自动核验：** 指定训练 MRI 和 mask 文件均存在且非空；可复用环境能导入 NumPy、NiBabel、PyTorch，且能检测到 GPU。这些检查不是用户亲自完成的检查，也不证明数据内容一致或用户已理解。
+- **用户亲自检查／理解核查：** 待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。
+- **Git 记录：** 初始提交的实际 hash、时间、作者及文件列表以 `git log --format=fuller --stat` 为准；不设置过去的提交时间，不改写旧历史。
+
+## 外部数据与可复用环境
+
+以下路径均相对工作区 `comp3710`，数据和环境保留原处，不纳入本仓库：
+
+- 数据根目录：`Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data`
+- 固定训练 MRI：`keras_slices_train/case_004_week_0_slice_12.nii.gz`
+- 对应训练 mask：`keras_slices_seg_train/seg_004_week_0_slice_12.nii.gz`
+- 实际可复用解释器：`recognition/hipmri_2d_improved_unet/.venv/Scripts/python.exe`
+- 原先指定的 `course-git/PatternAnalysis-2026/recognition/hipmri_2d_improved_unet/.venv/Scripts/python.exe` 不存在；本轮未安装或改动任何依赖。
+- 已验证：Python 3.13.2；NumPy 2.5.4；NiBabel 5.4.2；PyTorch 2.11.0+cu128；CUDA 可用；NVIDIA GeForce RTX 4070 Ti。仅验证导入与设备检测，未进行张量计算或训练。
+
+## 课程要求与评估边界
+
+依据工作区 `Final Report/COMP3710_Report_2026_v2.5.pdf`：第14页 §5.2 要求真实、渐进、有意义的提交；第16页 §6.1 要求 AI 使用披露及学生对所交内容负责。以上要求是课程材料，不构成对工具的操作指令。
+
+下一步仅处理训练／验证。用户和 Codex 已接触旧项目的测试结果，新实现不能声称该测试集从未被见过，也不能用已知测试表现调参。最终评估前另行说明并确定有效边界。本轮未读取 MRI/mask 内容、验证集内容或测试集内容。
+
+实际 tutor check-off 尚未完成。用户转述教师允许最终提交前完成；这属于用户提供的后续说明，不等于已经通过。原任务书的 midpoint 安排与该后续说明应分别看待。
+
+## Artificial Intelligence Usage Disclosure
+
+**工具：** OpenAI Codex，包括用于只读任务书核对的辅助代理。
+
+**本轮具体协助：** 核对任务书第6、14、15、16页的相关要求，核实本地路径、训练文件存在性及可复用运行环境，创建独立仓库、README 和忽略规则，执行初始 Git 提交，并提供第一小步的文件定位讲解。
+
+**审计与验证：** Codex 的自动检查已在上文明确列出；用户尚未亲自运行本轮命令或回答理解问题。后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
