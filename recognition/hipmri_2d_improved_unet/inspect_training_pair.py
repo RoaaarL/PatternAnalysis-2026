@@ -1,4 +1,4 @@
-"""Inspect one training pair as arrays and tensors; run from the repository root."""
+"""Probe the fixed reference in the full training path list; run from repo root."""
 
 from pathlib import Path
 
@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from dataset import HipMRIPairDataset
+from dataset import HipMRIPairDataset, collect_pairs
 
 data_root = Path(
     "../../Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data"
@@ -24,13 +24,18 @@ print("MRI shape:", image.shape)
 print("Mask shape:", mask.shape)
 print("Mask labels:", np.unique(mask))
 
-training_dataset = HipMRIPairDataset([(image_path, mask_path)])
-print("Dataset samples:", len(training_dataset))
-training_loader = DataLoader(
-    training_dataset, batch_size=1, shuffle=False, num_workers=0
+training_pairs = collect_pairs(
+    data_root / "keras_slices_train", data_root / "keras_slices_seg_train"
 )
-print("DataLoader batches:", len(training_loader))
-image_batch, mask_batch = next(iter(training_loader))
+reference_index = training_pairs.index((image_path, mask_path))
+training_dataset = HipMRIPairDataset(training_pairs)
+print("Dataset samples:", len(training_dataset))
+print("Reference list index:", reference_index)
+reference_loader = DataLoader(
+    training_dataset, batch_size=1, sampler=[reference_index], num_workers=0
+)
+print("Reference loader batches:", len(reference_loader))
+image_batch, mask_batch = next(iter(reference_loader))
 normalized_image = image_batch[0]
 mask_tensor = mask_batch[0]
 

@@ -16,7 +16,7 @@
 - **操作者：** Codex 执行目录、数据文件存在性、运行环境和旧 Git 状态核验，创建本说明及根目录 `.gitignore`，并执行初始提交。Git 使用本地自动化身份 `Codex <codex@local.invalid>`；该保留域名地址只是身份标识，不是用户邮箱。
 - **实际产物：** <span style="color: purple;"><s>仅本说明与必要忽略规则；尚未实现数据读取、模型或训练。</s></span> <span style="color: purple;">起步提交仅包含本说明与必要忽略规则；本次进一步提交固定一对训练文件的读取脚本，尚未实现模型或训练。</span>
 - **Codex 自动核验：** 指定训练 MRI 和 mask 文件均存在且非空；可复用环境能导入 NumPy、NiBabel、PyTorch，且能检测到 GPU。这些检查不是用户亲自完成的检查，也不证明数据内容一致或用户已理解。
-- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；<s>当前等待单样本 tensor 形状的理解回答</s>单样本 tensor 通道轴已回答正确，<s>目前等待 min-max 归一化数值例的回答</s>归一化数值例也已回答正确，<s>目前等待 batch 形状理解问题的回答</s>batch 与通道数的区别已回答正确，<s>目前等待模块导入与函数复用的理解回答</s>函数复用理由已回答正确，<s>目前等待单样本读取函数返回顺序的理解回答</s>返回顺序已回答正确，<s>目前等待 Dataset 按编号取样的理解回答</s>Dataset 按编号取样已回答正确，<s>目前等待 DataLoader 分批数量的理解回答</s>DataLoader 分批已回答正确，<s>目前等待文件名逐对核查的理解回答</s>文件名逐对核查已回答正确，目前等待患者分组独立性的理解回答，不记录为用户亲自运行。</span>
+- **用户亲自检查／理解核查：** <span style="color: purple;"><s>待完成。当前只要求定位下述一对训练文件并解释配对依据；等待用户反馈后再进入数据读取，不提前实现后续阶段。</s></span> <span style="color: purple;"><s>文件名配对的理解核查已完成，用户回答正确；尚未收到文件定位命令的运行输出，因此不记为用户已运行或核验文件。本次反馈允许进入下一小步的数据读取，读取结果仍待实际运行。</s></span> <span style="color: purple;">用户已正确解释不同时间点不能配对，并明确委托 Codex 运行命令。文件定位及本次数据读取均由 Codex 执行；<s>用户尚待回答数组读取这一步的理解问题</s>用户已正确解释 mask 编号没有亮度倍数关系，<s>目前等待可视化理解问题的回答</s>也已正确解释显示颜色不改变类别编号；<s>当前等待单样本 tensor 形状的理解回答</s>单样本 tensor 通道轴已回答正确，<s>目前等待 min-max 归一化数值例的回答</s>归一化数值例也已回答正确，<s>目前等待 batch 形状理解问题的回答</s>batch 与通道数的区别已回答正确，<s>目前等待模块导入与函数复用的理解回答</s>函数复用理由已回答正确，<s>目前等待单样本读取函数返回顺序的理解回答</s>返回顺序已回答正确，<s>目前等待 Dataset 按编号取样的理解回答</s>Dataset 按编号取样已回答正确，<s>目前等待 DataLoader 分批数量的理解回答</s>DataLoader 分批已回答正确，<s>目前等待文件名逐对核查的理解回答</s>文件名逐对核查已回答正确，<s>目前等待患者分组独立性的理解回答</s>case 分组独立性已回答正确，目前等待 sampler 索引与病例编号区别的理解回答，不记录为用户亲自运行。</span>
 - **Git 记录：** 初始提交的实际 hash、时间、作者及文件列表以 `git log --format=fuller --stat` 为准；不设置过去的提交时间，不改写旧历史。
 
 ## 外部数据与可复用环境
@@ -54,7 +54,9 @@
 
 <span style="color: purple;">本步具体协助：Codex 按严格文件名格式提取数字 case 分组，统计训练与验证编号集合并检查交集；读取被阻断时审计仍通过，未修改划分、读取像素或扫描测试文件名。case 编号只作为当前患者分组代理。</span>
 
-**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，<s>归一化理解仍待用户回答</s>归一化数值例已回答正确，<s>batch 理解仍待用户回答</s>batch 形状理解已回答正确，<s>模块导入理解仍待用户回答</s>函数复用理由已回答正确，<s>load_pair 返回顺序的理解仍待用户回答</s>返回顺序已回答正确，<s>Dataset 按编号取样的理解仍待用户回答</s>Dataset 按编号取样已回答正确，<s>DataLoader 分批理解仍待用户回答</s>DataLoader 分批已回答正确，<s>文件名配对核查的理解仍待用户回答</s>文件名配对核查已回答正确，患者分组独立性的理解仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
+<span style="color: purple;">本步具体协助：Codex 将完整训练路径清单传给 Dataset，并为固定参考样本构造只含一条索引的参考 DataLoader；核对惰性构造、实际读取范围及与前一步的 tensor 一致性，没有遍历全量图像或训练。</span>
+
+**审计与验证：** Codex 的自动检查已在上文明确列出；<span style="color: purple;"><s>用户尚未亲自运行本轮命令或回答理解问题。</s></span> <span style="color: purple;"><s>用户已正确回答文件名配对的理解问题；命令运行输出尚未提供，运行状态未经确认。</s></span> <span style="color: purple;">用户已正确回答文件名配对问题；文件定位及数组读取的运行输出均由 Codex 取得，<s>数组读取理解核查待用户回答</s>数组读取中的类别编号理解已确认，<s>可视化理解核查仍待用户回答</s>显示配色与类别编号的区别已回答正确，<s>tensor 理解核查仍待用户回答</s>单样本通道轴理解已回答正确，<s>归一化理解仍待用户回答</s>归一化数值例已回答正确，<s>batch 理解仍待用户回答</s>batch 形状理解已回答正确，<s>模块导入理解仍待用户回答</s>函数复用理由已回答正确，<s>load_pair 返回顺序的理解仍待用户回答</s>返回顺序已回答正确，<s>Dataset 按编号取样的理解仍待用户回答</s>Dataset 按编号取样已回答正确，<s>DataLoader 分批理解仍待用户回答</s>DataLoader 分批已回答正确，<s>文件名配对核查的理解仍待用户回答</s>文件名配对核查已回答正确，<s>患者分组独立性的理解仍待用户回答</s>case 分组独立性已回答正确，sampler 索引选择的理解仍待用户回答。本次预览也由 Codex 生成和查看，不能写成用户已经亲自检查图像。</span>后续只在收到实际输出或回答后追加对应记录，不把自动检查写成用户验证，不把运行成功视为理解或原创性通过。
 
 ## <span style="color: purple;">逐步记录</span>
 
@@ -171,5 +173,16 @@
 - <span style="color: purple;">Codex 实际输出：训练路径对 11460、Train case groups: 31；Validation filename pairs: 660、Validation case groups: 4；Shared case IDs: []。固定参考 case_004 对应分组 4，核查其只在训练编号集合。按上述键，两侧没有 case 分组交叉；没有把空交集写成全部无泄漏的证明。</span>
 - <span style="color: purple;">Codex 自动核查：所有训练／验证 MRI 名均能按严格格式解析；临时阻断 nib.load 时审计仍成功，确认未读取图像内容；未扫描测试文件名，也未修改数据目录或现有划分。单样本 Dataset/DataLoader 脚本仍保持原样。</span>
 - <span style="color: purple;">Codex 构造的解析核查：仅使用内存中的假设路径，训练 case_004_week_0_slice_12 与验证 case_4_week_12_slice_30 都识别为组 4，能检测交集；非法 case 编号报 ValueError。检查通过。该构造例不是真实验证文件，不是临床实验或模型结果。</span>
-- <span style="color: purple;">用户理解状态：文件数相同仍需逐名核查已回答正确；本步等待回答“假设固定 case_004_week_0_slice_12 仍在训练侧，而 case_004_week_12_slice_30 放到验证侧，能否通过按患者分组独立性检查，为什么”。以上审计由 Codex 执行，不记录为用户已亲自运行或已确认患者独立性。</span>
+- <span style="color: purple;">用户理解状态：文件数相同仍需逐名核查已回答正确；<s>本步等待回答“假设固定 case_004_week_0_slice_12 仍在训练侧，而 case_004_week_12_slice_30 放到验证侧，能否通过按患者分组独立性检查，为什么”。</s>用户现已回答：“不能，因为 case 编号都是 004，即使 week 和 slice 不同，也属于同一患者分组，不能跨训练集和验证集。”Codex 核对为正确，确认按当前 case 分组规则保持独立这一点。以上审计由 Codex 执行，不记录为用户已亲自运行或已确认真实患者身份映射。</span>
 - <span style="color: purple;">Git 与停止位置：开始本步时最新提交为 4681dceccf86debc069d6603a37f82032be612f4；只提交实际分组辅助函数、检查脚本和带标记说明，不提交患者清单或数据文件，实际新 hash／时间／作者以 git log 为准。与报告对应的是按病例分组的训练／验证边界及数据泄漏检查证据；尚未做真实身份映射、全量像素检查、补边、模型或训练。到此停止，等待用户反馈。</span>
+
+### <span style="color: purple;">完整训练路径清单接入 Dataset，仍只核查参考一批（2026-10-25）</span>
+
+- <span style="color: purple;">本步问题：让 Dataset 保存已核对的完整训练路径清单，同时继续用固定 MRI 核查读取结果。Codex 仅改检查脚本：collect_pairs 取得训练清单，传给 HipMRIPairDataset；用 training_pairs.index((image_path, mask_path)) 找到固定参考切片的位置，不存在时会报错，不自动改取其他切片。</span>
+- <span style="color: purple;">取样范围：命名为 reference_loader，使用 batch_size=1、sampler=[reference_index]、num_workers=0，仅选择这一条清单索引。没有把它称作完整训练 loader 或已遍历一个 epoch，也没有在构造 Dataset 时读取 11460 张图像。</span>
+- <span style="color: purple;">Codex 实际输出：Dataset samples: 11460；Reference list index: 4；Reference loader batches: 1；MRI batch shape: (1, 1, 256, 128)；Mask batch shape: (1, 256, 128)。固定参考仍为 case_004_week_0_slice_12 与对应 mask；图像范围 0.0～1.0、float32，mask 为 int64、标签 [0, 1, 2, 3]。</span>
+- <span style="color: purple;">编号解释：reference_index 是排序路径清单中的零起始位置，4 表示第 5 条记录；文件名中的 case_004 是分组编号。两者本次数值相同只是巧合，sampler 接受位置索引而不是 case 编号，位置会随清单顺序变化而变化。</span>
+- <span style="color: purple;">Codex 一致性核查：与本重建仓库上一提交的单样本流程比较，normalized_image、mask_tensor、image_batch、mask_batch 四个 tensor 的逐点值／dtype／device 均保持一致，Dataset 中路径数为 11460，参考 loader 长度为 1，索引处确实是固定路径对。</span>
+- <span style="color: purple;">Codex 读取范围核查：只在单独构造与运行参考 loader 的范围内计数。完整 Dataset、loader 和 iterator 构造均未读取 NIfTI；第一次 next 恰好读取固定 MRI 和 mask 两个路径，随后同一迭代器结束且未增加读取。原图预览和前后版本比较会重复读取同一对文件，因此不把整个核查进程描述成总共只读两次。</span>
+- <span style="color: purple;">当前限制与用户理解：case 分组独立性已回答正确；本步等待回答“若以后参考切片在清单中的位置变为 7，而 case 编号仍为 004，sampler 应选哪个数字，为什么”。7 是理解题假设，本次真实位置仍是 4。其余训练切片的内容尚未逐个读取验证；以上运行由 Codex 执行。</span>
+- <span style="color: purple;">Git 与停止位置：开始本步时最新提交为 b0f914effb89d241640470c992bd619125a37c3a；只提交实际检查脚本及带标记说明，不提交完整路径清单或数据，实际新 hash／时间／作者以 git log 为准。与报告对应的是完整清单的 Dataset 接口和固定参考 batch 的运行证据；未改划分，未做全量像素检查、补边、模型或训练。到此停止，等待用户反馈。</span>
