@@ -8,7 +8,7 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from dataset import load_pair
+from dataset import HipMRIPairDataset
 
 data_root = Path(
     "../../Final Report/HipMRI_2D_Improved_UNet_学习/data/keras_slices_data"
@@ -23,7 +23,9 @@ print("MRI shape:", image.shape)
 print("Mask shape:", mask.shape)
 print("Mask labels:", np.unique(mask))
 
-normalized_image, mask_tensor = load_pair(image_path, mask_path)
+training_dataset = HipMRIPairDataset([(image_path, mask_path)])
+print("Dataset samples:", len(training_dataset))
+normalized_image, mask_tensor = training_dataset[0]
 
 print("MRI range before:", image.min().item(), image.max().item())
 print("MRI range after:", normalized_image.min().item(), normalized_image.max().item())

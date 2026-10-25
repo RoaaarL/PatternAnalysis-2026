@@ -3,6 +3,7 @@
 import nibabel as nib
 import numpy as np
 import torch
+from torch.utils.data import Dataset
 
 
 def minmax_normalize(values):
@@ -26,3 +27,17 @@ def load_pair(image_path, mask_path):
     image_tensor = torch.from_numpy(image).to(torch.float32).unsqueeze(0)
     mask_tensor = torch.from_numpy(mask).to(torch.long)
     return minmax_normalize(image_tensor), mask_tensor
+
+
+class HipMRIPairDataset(Dataset):
+    """Load single samples from a caller-verified list of MRI/mask path pairs."""
+
+    def __init__(self, pairs):
+        self.pairs = list(pairs)
+
+    def __len__(self):
+        return len(self.pairs)
+
+    def __getitem__(self, index):
+        image_path, mask_path = self.pairs[index]
+        return load_pair(image_path, mask_path)
