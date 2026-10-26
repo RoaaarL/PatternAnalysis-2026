@@ -2,6 +2,8 @@
 
 <span style="color: purple;">当前进度以“逐步记录”的最近一步为准；早期记录及删除线保留当时状态，不代表当前仍未完成。</span>
 
+<span style="color: purple;">最终实验汇总：<a href="FINAL_REPORT.md" style="color: purple;">FINAL_REPORT.md</a>。报告整合公平对照、已有验证失败、资源成本及测试中断／授权补跑；原始逐步记录和证据保留。</span>
+
 ## 来源与范围
 
 这是从 2026-10-25 开始、基于既有学习和旧案例、由 Codex 辅助的逐步重新实现。用户此前已经接触完整旧实现及实验结果；本记录不代表首次独立开发，也不补造旧项目的早期渐进开发历史。重新实现能否满足 originality hurdle 仍须由教学团队判断。
@@ -807,3 +809,11 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">第26次提交保存最终frozen_test_recovery_20261026.json（完整原始恢复记录）、frozen_test_improved_20261026.json（本次完整Improved）、frozen_test_comparison_20261026.json（来源／指标／暴露及检查汇总）、frozen_test_comparison_20261026.png（只含聚合图）及实际运行前的recovery plan。原baseline、原失败、两份guard、console和所有旧实验均保留。聚合图已实际查看；只调整后处理图的留白以避免轴标题与披露重叠，新旧后处理的全部数值／来源字段逐对象相同，未改13份冻结评估依赖。数据／权重／含MRI图片仍不入Git，当前只本地提交。</span>
 
 <span style="color: purple;">本结论限于提供测试划分中的540张、3个filename case代理组；没有case等权、统计显著性、独立身份、毫米几何或临床达标保证。ID5仍按接受的派生ID保留假设解释。已完成冻结比较与明确授权的故障补跑，不把测试分数用于后续模型或超参数选择，也不把自动检查改记为用户独立实现／课程check-off通过。</span>
+
+## <span style="color: purple;">最终实验报告整理（2026-10-26）</span>
+
+<span style="color: purple;">本组从第26次提交85aa4323fbe91ed7af3b33e8d156547309651623开始，只整理已有证据。新增FINAL_REPORT.md及collect_final_report_evidence.py；后者只用标准库读取19份保存JSON，复算混淆矩阵对应指标、原profile计时和收益／成本比，生成evidence/final_report_summary_20261026.json。没有导入模型框架、读取原始MRI／mask或权重，也没有训练、模型调用、测试重跑或重测profile。本次不执行含模型计算的旧测试套件；旧129项通过记录仍按其发生阶段保留。</span>
+
+<span style="color: purple;">报告明确区分旧CE选模5／3、统一ID5选模5／17和冻结测试；旧五例失败仍标为Improved3／20，未冒充最终第17轮案例。对资源敏感、主要关注ID5的工程原型，当前测试仅+0.106个百分点的目标收益不足以证明默认升级值得：参数+64.37%、已测训练allocated峰值约3.11倍，现有四组合成前向median约3.43至7.98倍。较高recall与macro可能有价值，但需要明确的FP／FN代价和预算；该分析不更换冻结模型或根据测试再调参。</span>
+
+<span style="color: purple;">第27次提交对应最终报告、标准库汇总及本组内容／来源核对。基于已有统计和文件做算术、来源摘要、局部链接、紫色标记及阅读布局检查；原有中断、用户“允许，仅补跑 Improved”的明确授权、累计246批／984张次和前444张重复均保留，baseline没有重跑。此处自动整理与复核由Codex及辅助代理完成，不改记为用户独立实现、理解、originality或check-off通过；不修改旧课程仓库或发布PR。</span>
