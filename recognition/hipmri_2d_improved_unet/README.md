@@ -40,6 +40,8 @@
 
 ## Artificial Intelligence Usage Disclosure
 
+<span style="color: purple;">2026-10-26正式结果新增协助：Codex按用户已确认方案，在冻结源码7a8ffc2上从头执行baseline与Improved各20轮，完成各57300次更新，按验证CE选择权重；生成整集验证恢复核查、独立合成推理profile及对照曲线，查看实际图像并核对机器报告。全部运行、汇总、复核和提交由Codex及辅助代理完成；用户亲自完成的是前述两点理解回答与方案／工作假设确认，未据此记录为亲自运行、已理解所有代码或完成check-off。</span>
+
 <span style="color: purple;">2026-10-26资源记录与正式训练授权：用户正确解释参考图macro不能证明ID5效果，以及验证不能反向更新，并明确认可20轮方案及派生ID保留工作假设。Codex记录此确认，新增分阶段资源记录、推理性能入口、协议漂移与setup失败检查，再按批准方案执行训练／验证。自动检查、GPU运行与Git操作仍由Codex及辅助代理完成，不能记为用户亲自运行或独立实现。</span>
 
 <span style="color: purple;">正式实验前修复与核查：Codex按用户后续审查要求添加像素读取前的shape／Affine检查、针对性检查及训练／验证全量头信息补充审计；核实CSIRO原始标签说明，并明确课程2D派生保留ID尚未独立确认。只读比较新旧源码，重新检查固定训练图及现有smoke权重的输入／恢复链路，准备正式实验方案。未新增真实MRI训练，未读取测试目录、文件名或像素；本轮用户整体核查和正式训练确认均保持待完成。</span>
@@ -499,3 +501,79 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">推理入口已用构造base2 checkpoint在CPU走完四组合并复算百分位，重复输出明确拒绝；CPU结果不当GPU性能。两模型正式GPU profile在各20轮完成、验证CE选定checkpoint后执行。模型／预处理／loss／指标代码保持；源文件与实际配置会在正式运行前冻结记录，运行过程不因验证分数追加轮数或改参数。</span>
 
 <span style="color: purple;">本组先提交已检查的资源实现、确认记录和回归证据；随后在运行前写入包含此源码提交、文件hash、训练／验证清单hash、批准方案及新输出路径的formal_run_plan_20261026.json。正式结果完成后再按真实进度提交证据。所有运行均由Codex执行；旧项目、旧结果和旧Git历史保持，仍不读测试数据、不发布PR。</span>
+
+## <span style="color: purple;">两模型各20轮正式训练、验证与资源结果（2026-10-26）</span>
+
+<span style="color: purple;">本组已实际完成。资源实现提交为7a8ffc221986e98f664990c1b441684ed4475d1c（第19次提交）；正式运行前记录evidence/formal_run_plan_20261026.json及源码／清单摘要。两模型均从seed3710的新初始化开始，没有从smoke checkpoint接续；各完成20个完整epoch、每轮2865次Adam更新，总57300次。每轮使用全部11460个训练切片并验证全部660个切片，两侧仍为31／4个case代理组、交集为空。未读取或评估测试集。</span>
+
+### <span style="color: purple;">整组代码如何连起来</span>
+
+1. <span style="color: purple;">train.py先读取配对路径，核对case分组和已批准的--formal-plan：样本清单hash、9份核心源文件hash、20轮、batch4、base16、六类、lr0.001、seed3710、CUDA及无train-limit。模型／预处理／loss／指标代码在两次运行之间保持冻结。Dataset继续按需执行同一套shape／Affine检查、min-max、补边／valid区域和batch整理。</span>
+2. <span style="color: purple;">每轮先用measured_call包住共享run_epoch的训练分支：forward→有效区域one-hot CE→backward→Adam.step；再包住验证分支：eval、关闭梯度、无optimizer更新。StageMeasurement在边界同步CUDA、重置峰值并记录绝对allocated／reserved与阶段耗时；它不改变训练公式或RNG。验证仍累计整个split的confusion后计算Dice／IoU。</span>
+3. <span style="color: purple;">每轮保存last.pt；只有全验证CE严格低于此前最佳时才保存best.pt，所以相同CE保留最早轮。跑满20轮后，另建模型恢复best并核对固定训练参考logits。本次两模型的恢复差值均为0。完成20轮的运行与所选权重来自哪个epoch是两件事。</span>
+4. <span style="color: purple;">summarize_formal_runs.py仅在两份报告均passed后做CPU权重／元数据核查，重算confusion对应指标、预算与选模规则。两个last checkpoint的所有Adam参数step均为57300；选中baseline第5轮为14325，Improved第3轮为8595。实际Adam的betas／eps／weight_decay等设置也逐项一致。提交报告省略11460条完整训练文件名，保留数量与manifest摘要。</span>
+5. <span style="color: purple;">verify_selected_validation.py再从选中权重完整重跑同样B4的660个验证切片。两模型混淆矩阵、Dice／IoU逐值相同，CE差均为0，模型状态及权重／报告／方案／源码hash前后不变。最后独立运行profile_inference.py，只用固定合成输入测forward，不与训练或验证恢复并行。</span>
+
+### <span style="color: purple;">按预先规定的CE规则选出的结果</span>
+
+<table style="color: purple;">
+<tr><th>模型</th><th>选中epoch</th><th>全验证CE</th><th>ID5 Dice</th><th>ID5 IoU</th><th>macro Dice（排除ID0）</th></tr>
+<tr><td>Baseline U-Net</td><td>5</td><td>0.066359</td><td>0.816567</td><td>0.689999</td><td>0.903274</td></tr>
+<tr><td>Improved U-Net</td><td>3</td><td>0.070507</td><td>0.800187</td><td>0.666927</td><td>0.899153</td></tr>
+</table>
+
+<span style="color: purple;">所有分数都是完整660切片、21626880个有效像素的pixel-pooled验证指标。按已接受的派生ID保留假设解释ID5为前列腺；它不是独立核实的派生标签证明，也不是旧项目按case等权的指标。两次运行各20轮／57300步是实际训练预算；比较用的权重明确恢复到第5／3轮，没有把第20轮或最高ID5轮次替代预定CE选模结果。</span>
+
+<table style="color: purple;">
+<tr><th>原始ID（组织名依赖保留ID假设）</th><th>Baseline Dice</th><th>Improved Dice</th></tr>
+<tr><td>0 Background</td><td>0.994725</td><td>0.994179</td></tr>
+<tr><td>1 Body</td><td>0.982252</td><td>0.983033</td></tr>
+<tr><td>2 Bones</td><td>0.930606</td><td>0.939899</td></tr>
+<tr><td>3 Bladder</td><td>0.920924</td><td>0.875027</td></tr>
+<tr><td>4 Rectum</td><td>0.866023</td><td>0.897620</td></tr>
+<tr><td>5 Prostate</td><td>0.816567</td><td>0.800187</td></tr>
+</table>
+
+<span style="color: purple;">在这套预定CE选模方案下，baseline的主验证ID5 Dice高0.016380（约1.64个百分点），参数更少；本次没有显示Improved的所选模型在ID5上提升。不同类别有不同变化，不能据此断言所有类别或所有训练方案下某架构都更好。训练CE后期继续下降，而验证CE更早达到最低；ID5曲线与CE出现分歧，说明本次主报告指标与选模指标并不同义。</span>
+
+<span style="color: purple;">一个构造例帮助理解该分歧：假设单个像素真实为ID5，正确类概率0.6或0.9时argmax都可为5，这个像素的Dice都为1，但CE分别约0.511和0.105。<s>CE还会统计其余五类的概率误差</s>整集CE也累计真实类别为其余ID的像素损失，ID5 Dice只看ID5区域重叠；因此没有事后换成最高Dice的权重。此例是假设数值，不是某个真实MRI像素输出。</span>
+
+<span style="color: purple;">evidence/formal_comparison_curves_20261026.png画出全部20轮在线训练CE、固定模型全验证CE及ID5 Dice；星标对应最低CE选择，未把曲线最高Dice点冒充选中模型。已由Codex查看图像，标题、图例及选模标记与机器报告一致。</span>
+
+### <span style="color: purple;">资源结果与测量范围</span>
+
+<table style="color: purple;">
+<tr><th>模型</th><th>参数数</th><th>training峰值allocated MiB</th><th>validation峰值allocated MiB</th><th>恢复峰值allocated MiB</th></tr>
+<tr><td>Baseline</td><td>1940902</td><td>182.64</td><td>92.18</td><td>53.00</td></tr>
+<tr><td>Improved</td><td>3190194</td><td>567.99</td><td>141.25</td><td>84.84</td></tr>
+</table>
+
+<span style="color: purple;">MiB=1048576 bytes。training／validation各取20条相应阶段记录的最大绝对PyTorch峰值，恢复为独立1条；每run另有初始参考probe，共42条阶段记录，全部成功。reserved各阶段最大值为baseline250 MiB、Improved694 MiB，保留了缓存，不能把validation的reserved当作验证额外申请量。验证包含驻留Adam与最后梯度；恢复包含原模型／Adam／梯度及第二个恢复模型。这些值不是总GPU VRAM或优化器已释放的部署占用。</span>
+
+<span style="color: purple;">RTX4070Ti上的整次训练／验证及收尾墙钟分别2233.366秒与2696.265秒。阶段训练时间包含NIfTI读取和指标，先后顺序及文件缓存状态未隔离，不能把总时间差归因为架构纯计算差；纯forward比较使用下面独立warmup测量。记录了Python3.13.2、PyTorch2.11.0+cu128、NumPy2.5.4、cuDNN和后端设置，不声称跨环境位级或时延一致。</span>
+
+<table style="color: purple;">
+<tr><th>模型</th><th>输入[B,1,H,W]</th><th>batch前向median ms</th><th>batch前向p95 ms</th></tr>
+<tr><td>Baseline</td><td>[1,1,256,128]</td><td>1.793</td><td>2.266</td></tr>
+<tr><td>Baseline</td><td>[1,1,256,144]</td><td>1.634</td><td>3.157</td></tr>
+<tr><td>Baseline</td><td>[4,1,256,128]</td><td>1.711</td><td>2.672</td></tr>
+<tr><td>Baseline</td><td>[4,1,256,144]</td><td>1.772</td><td>2.420</td></tr>
+<tr><td>Improved</td><td>[1,1,256,128]</td><td>5.494</td><td>7.946</td></tr>
+<tr><td>Improved</td><td>[1,1,256,144]</td><td>5.945</td><td>7.480</td></tr>
+<tr><td>Improved</td><td>[4,1,256,128]</td><td>5.356</td><td>7.266</td></tr>
+<tr><td>Improved</td><td>[4,1,256,144]</td><td>5.134</td><td>7.546</td></tr>
+</table>
+
+<span style="color: purple;">每组合10次warmup后50次同步计时；median和linear p95已用原50个样本独立复算。FP32指模型／输入／输出dtype且无AMP，实际TF32设置另记。范围为forward与host启动／同步，不含checkpoint读取、输入构造／传输、I/O、指标和绘图；无优化器驻留。B4行是整个batch时间，除以4只得到摊销值，不是单个请求延迟；不要与训练阶段墙钟或总GPU占用混称。</span>
+
+### <span style="color: purple;">恢复验证、例图与证据位置</span>
+
+<span style="color: purple;">独立全验证恢复检查每模型660个样本、165个batch、optimizer_steps=0，完整confusion／Dice／IoU一致、CE差0，模型state及输入证据hash前后保持。例图先按数值最小case36、该case最小week0，找参考ID5阳性slice并取数值排序的中间项，得到case_036_week_0_slice_31；29个阳性slice中取零起始rank14，参考ID5像素955。规则不依赖模型输出，图中预测从原B4复跑捕获，不额外换B1以挑图。</span>
+
+<span style="color: purple;">已查看本地outputs/selected_validation_verification_20261026/validation_example.png：两模型都预测出ID5区域，ID5／ID3等边界仍与参考有差异。它只是一个确定性选择的验证例图，不替代660样本汇总，也不证明物理／医学对齐。包含MRI的例图、best.pt／last.pt仍留在忽略的outputs/，不提交数据或权重。</span>
+
+<span style="color: purple;">本次提交的evidence/formal_baseline_20261026.json和formal_improved_20261026.json保存20轮及42阶段记录，省略完整训练文件名；formal_comparison_20261026.json整合选中结果、资源与profile／恢复证据关联；formal_validation_replay_20261026.json保存恢复核查；formal_baseline_profile_20261026.json和formal_improved_profile_20261026.json保存全部原始计时；formal_run_plan_20261026.json是运行前冻结的批准计划。原smoke与第18次修复证据保持不变。</span>
+
+<span style="color: purple;">同一源码／数据清单、20轮／57300更新、真实Adam控制项、finite权重、CE最早最小轮次、恢复指标、8组计时与峰值都经自动及辅助代理只读复核。当前仅一个seed和4个验证case代理组；这是训练／验证对照，不是独立测试、case等权结果、统计显著性证明或消融结论。旧0.8316／0.8233未充当新结果；测试集没有读取或评估，check-off和originality状态未被自动改成通过。</span>
+
+<span style="color: purple;">源码资源记录已在第19次提交；本次第20次提交对应实际已完成的正式结果、分析／恢复辅助脚本及说明。全部旧历史、旧仓库和旧PR保持；新仓库仍仅本地保存，不发布或强推。用户已确认的两个理解点与方案授权如实记录，不能扩展成用户亲自执行或独立实现本组全部代码。</span>
