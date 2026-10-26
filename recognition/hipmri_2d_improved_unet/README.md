@@ -753,3 +753,17 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">AI使用披露：本组实现、构造检查、前置审计及后续真实运行均由Codex执行；用户本次指令提供运行授权，不等同于亲自实现、验证或已理解全部代码。旧训练／验证／诊断记录保持历史原文；在本段运行前记录时，尚未做实际模型测试评估。冻结方案不用于证明无关早期项目从未接触同一测试数据。</span>
 
 <span style="color: purple;">运行前完整114项检查通过、0跳过（原92＋输入审计10＋冻结评估12），日志及摘要关联在frozen_test_preflight_20261026.json。构造检查含4＋1尾批、有效像素加权CE及手算混淆矩阵、逐模型仅一遍、无梯度／state更新、原子固定guard、改plan／输出不能重跑、第二模型失败保留第一结果；另有4种冻结链错绑定在claim／forward前拒绝。第24次提交保存新脚本、检查、测试前模型／规则冻结记录与header／字节审计；实际测试模型前向尚未开始，最终执行计划在这次源码提交后另行冻结。</span>
+
+### <span style="color: purple;">首次测试的实际中断及额外授权</span>
+
+<span style="color: purple;">首次执行按第24次提交720452518b28c2a85f4bbded4c5802e90982f429及frozen_test_plan_20261026.json（SHA8e7ad57a31cdf1b24f82627b0a0c6afd6a332da1b12e5f98aabbe78688bdc5e5）运行。baseline完成135次batch forward、540张／17694720有效像素，0更新，state未变；保存的测试ID5 Dice=0.8431613324624428、IoU=0.7288495415330413、CE=0.055552441433623985。重叠分数、macro和accuracy已从保存的混淆矩阵独立重算；CE是该次共享加权loss的保存值，不能仅由混淆矩阵重构。</span>
+
+<span style="color: purple;">Improved在第111次forward hook（已计算444张输出）向guard写进度时，Path.replace抛出Windows WinError5，进程以失败退出。此时第111批logits尚未返回run_epoch计算指标，前110批的累计混淆矩阵／loss只在已退出进程内存，未落盘；因此不能从剩余24批或六位小数的console CE补出完整分数。原guard与evaluation.json均保留incomplete，已完成baseline_result保留；没有伪造Improved测试分数、拿验证分数替代或将成对测试标成完成。具体外部文件占用者／拒绝原因未独立证明。</span>
+
+<span style="color: purple;">故障来自Codex新增进度持久化代码未处理单次Windows文件替换拒绝。随后仅修复I/O：同目录唯一temp、flush／fsync、原子替换仅对PermissionError有限6次重试，总等待上限0.775秒；永久失败保留原目的文件并只清理自己的temp，最终写入异常不掩盖原模型异常。模型评估等11个非I/O函数AST不变，既有权重／预处理／loss／指标不变。修复后的evaluator SHA有意区别于原运行计划，原源码由Git第24次提交保留，不倒改原plan／raw输出来掩盖失败。</span>
+
+<span style="color: purple;">修复后121项检查通过、0跳过（新增7项I/O故障注入），且在本地构造JSON上完成500次文件替换；这些检查没有真实测试前向。frozen_test_io_fix_20261026.json保存新旧源码摘要和检查记录；frozen_test_attempt_20261026.json、frozen_test_baseline_20261026.json及frozen_test_failure_20261026.json分别保存原始中断记录、完整baseline和如实失败分析。失败后仅文件摘要／保存统计复核：78份旧记录及冻结／原权重不变，压缩test内容不变；Improved运行时最终state核查未完成，不假称已验证。</span>
+
+<span style="color: purple;">因用户要求每模型一次，Codex没有静默重跑；先修复、检查并说明已经发生的444张重复风险，再询问是否只允许Improved补做一次完整评估。用户明确回答“允许，仅补跑 Improved”，原问题及回复保存在frozen_test_recovery_approval_20261026.json。额外授权只覆盖同一第17轮权重／同一规则的一个完整补跑，baseline不再前向、原失败guard与原始结果保留；新恢复使用独立固定guard。模型／轮次／超参数／阈值没有因测试结果调整。第25次提交将记录故障、I/O修复、授权与受限恢复实现，补跑结果在执行后另记，不能声称从未重复测试计算。</span>
+
+<span style="color: purple;">受限恢复入口recover_frozen_test.py只对原Improved第17轮调用一次共享evaluate_model；baseline仅在CPU核算原混淆矩阵，不构建模型。它校验用户额外授权、原attempt与guard／baseline一致、同权重／同规则／同数据与runtime、新固定recovery guard，保存原444张重复的计划值及实际值，失败不自动再推理。完整129项检查通过、0跳过（121＋恢复8），关联frozen_test_recovery_preflight_20261026.json；另有纯JSON汇总器summarize_frozen_test.py，检查两份完整结果与暴露次数，只从保存的混淆矩阵重算分数和绘制聚合图，不接触测试像素或模型。</span>

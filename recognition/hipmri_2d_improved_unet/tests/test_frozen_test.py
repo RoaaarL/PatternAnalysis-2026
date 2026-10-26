@@ -307,6 +307,161 @@ class FrozenTestChecks(unittest.TestCase):
                 frozen.claim_once(root, {"status": "running", "plan_sha256": "b" * 64})
             self.assertEqual(frozen.read(root / frozen.ONCE_GUARD)["status"], "incomplete")
 
+    def test_persist_retries_two_permission_errors_then_atomically_succeeds(self):
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
+            root = Path(folder)
+            destination = root / "state.json"
+            destination.write_bytes(b"previous destination")
+            real_replace = frozen.os.replace
+            calls = []
+            def replace(source, target):
+                calls.append((Path(source), Path(target)))
+                self.assertEqual(Path(source).parent, destination.parent)
+                if len(calls) <= 2:
+                    self.assertEqual(destination.read_bytes(), b"previous destination")
+                    raise PermissionError(13, "constructed transient Windows replacement conflict")
+                return real_replace(source, target)
+            with patch("evaluate_frozen_test.os.replace", side_effect=replace), \
+                    patch("evaluate_frozen_test.time.sleep") as sleep:
+                frozen.persist(destination, {"status": "new"})
+            self.assertEqual(len(calls), 3)
+            self.assertEqual(sleep.call_count, 2)
+            self.assertEqual(len({source for source, _ in calls}), 1)
+            self.assertEqual(frozen.read(destination), {"status": "new"})
+            self.assertEqual(list(root.glob(".state.json.*.tmp")), [])
+
+    def test_permanent_persist_failure_preserves_target_and_cleans_only_own_temp(self):
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
+            root = Path(folder)
+            destination = root / "state.json"
+            destination.write_bytes(b"previous destination")
+            unrelated = root / ".state.json.someone_else.tmp"
+            unrelated.write_bytes(b"do not remove")
+            with patch("evaluate_frozen_test.os.replace", side_effect=PermissionError(13, "constructed permanent conflict")) as replace, \
+                    patch("evaluate_frozen_test.time.sleep") as sleep:
+                with self.assertRaisesRegex(PermissionError, "permanent conflict"):
+                    frozen.persist(destination, {"status": "new"})
+            self.assertEqual(replace.call_count, frozen.PERSIST_REPLACE_ATTEMPTS)
+            self.assertEqual(sleep.call_count, frozen.PERSIST_REPLACE_ATTEMPTS - 1)
+            self.assertEqual(destination.read_bytes(), b"previous destination")
+            self.assertEqual(unrelated.read_bytes(), b"do not remove")
+            self.assertEqual(list(root.glob(".state.json.*.tmp")), [unrelated])
+
+    def test_non_permission_persist_failure_is_not_retried(self):
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
+            root = Path(folder)
+            destination = root / "state.json"
+            destination.write_bytes(b"previous destination")
+            with patch("evaluate_frozen_test.os.replace", side_effect=OSError("constructed disk failure")) as replace, \
+                    patch("evaluate_frozen_test.time.sleep") as sleep:
+                with self.assertRaisesRegex(OSError, "disk failure"):
+                    frozen.persist(destination, {"status": "new"})
+            self.assertEqual(replace.call_count, 1)
+            self.assertEqual(sleep.call_count, 0)
+            self.assertEqual(destination.read_bytes(), b"previous destination")
+            self.assertEqual(list(root.glob(".state.json.*.tmp")), [])
+
+    def test_each_persist_call_owns_a_unique_temporary_name(self):
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
+            root = Path(folder)
+            destination = root / "state.json"
+            real_replace = frozen.os.replace
+            sources = []
+            def replace(source, target):
+                sources.append(Path(source))
+                return real_replace(source, target)
+            with patch("evaluate_frozen_test.os.replace", side_effect=replace):
+                frozen.persist(destination, {"version": 1})
+                frozen.persist(destination, {"version": 2})
+            self.assertEqual(len(set(sources)), 2)
+            self.assertEqual(frozen.read(destination), {"version": 2})
+            self.assertTrue(all(not source.exists() for source in sources))
+
+    def test_transient_persistence_retry_does_not_repeat_any_model_forward(self):
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
+            root = Path(folder)
+            value = fixture(root)
+            real_replace = frozen.os.replace
+            injected = []
+            forwards = {name: 0 for name, _ in frozen.MODEL_EPOCHS}
+            class CountedModel(TinyFrozenModel):
+                def __init__(self, name):
+                    super().__init__()
+                    self.name = name
+                def forward(self, image):
+                    forwards[self.name] += 1
+                    return super().forward(image)
+            def replace(source, target):
+                payload = frozen.read(source)
+                first_count = payload.get("models", {}).get("baseline_unet", {}).get("forward_calls")
+                if Path(target) == root / frozen.ONCE_GUARD and first_count == 1 and len(injected) < 2:
+                    injected.append(str(source))
+                    raise PermissionError(13, "constructed transient hook write conflict")
+                return real_replace(source, target)
+            with patch("evaluate_frozen_test.os.replace", side_effect=replace), patch("evaluate_frozen_test.time.sleep"):
+                report = self.run_constructed(root, value, lambda name, **kwargs: CountedModel(name))
+            self.assertEqual(report["status"], "passed")
+            self.assertEqual(len(injected), 2)
+            self.assertEqual(forwards, {"baseline_unet": 2, "improved_unet": 2})
+            self.assertEqual([entry["forward_calls"] for entry in report["models"].values()], [2, 2])
+            value["args"].output_dir = root / "another_output"
+            with self.assertRaisesRegex(ValueError, "attempt already exists"):
+                self.run_constructed(root, value, lambda name, **kwargs: CountedModel(name))
+            self.assertEqual(forwards, {"baseline_unet": 2, "improved_unet": 2})
+
+    def test_permanent_hook_io_failure_stops_without_repeating_forward(self):
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
+            root = Path(folder)
+            value = fixture(root)
+            real_replace = frozen.os.replace
+            forwards = []
+            class CountedModel(TinyFrozenModel):
+                def forward(self, image):
+                    forwards.append(int(image.shape[0]))
+                    return super().forward(image)
+            def replace(source, target):
+                payload = frozen.read(source)
+                first_count = payload.get("models", {}).get("baseline_unet", {}).get("forward_calls")
+                if Path(target) == root / frozen.ONCE_GUARD and first_count == 1:
+                    raise PermissionError(13, "constructed permanent hook write conflict")
+                return real_replace(source, target)
+            with patch("evaluate_frozen_test.os.replace", side_effect=replace), patch("evaluate_frozen_test.time.sleep"):
+                with self.assertRaisesRegex(PermissionError, "permanent hook write conflict"):
+                    self.run_constructed(root, value, lambda *args, **kwargs: CountedModel())
+            self.assertEqual(forwards, [4])
+            report = frozen.read(value["args"].output_dir / "evaluation.json")
+            self.assertEqual(report["status"], "incomplete")
+            self.assertEqual(report["models"]["baseline_unet"]["forward_calls"], 1)
+            self.assertNotIn("improved_unet", report["models"])
+            self.assertTrue((root / frozen.ONCE_GUARD).exists())
+            value["args"].output_dir = root / "retry_output"
+            with self.assertRaisesRegex(ValueError, "attempt already exists"):
+                self.run_constructed(root, value)
+            self.assertEqual(forwards, [4])
+
+    def test_final_persistence_error_does_not_mask_the_original_model_error(self):
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as folder:
+            root = Path(folder)
+            value = fixture(root)
+            real_replace = frozen.os.replace
+            model_failed = []
+            def build(*args, **kwargs):
+                model_failed.append(True)
+                raise RuntimeError("constructed original model error")
+            def replace(source, target):
+                if model_failed and Path(target) == value["args"].output_dir / "evaluation.json":
+                    raise PermissionError(13, "constructed final report conflict")
+                return real_replace(source, target)
+            with patch("evaluate_frozen_test.os.replace", side_effect=replace), patch("evaluate_frozen_test.time.sleep"):
+                with self.assertRaisesRegex(RuntimeError, "original model error") as caught:
+                    self.run_constructed(root, value, build)
+            self.assertTrue(any("Final state persistence also failed" in note for note in caught.exception.__notes__))
+            report = frozen.read(root / frozen.ONCE_GUARD)
+            self.assertEqual(report["status"], "incomplete")
+            self.assertEqual(report["error"]["type"], "RuntimeError")
+            self.assertEqual(report["models"]["baseline_unet"]["forward_calls"], 0)
+            self.assertTrue(any(error["type"] == "PermissionError" for error in report["persistence_errors"]))
+
 
 if __name__ == "__main__":
     unittest.main()

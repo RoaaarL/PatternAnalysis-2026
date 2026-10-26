@@ -5,7 +5,10 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
+import tempfile
+import time
 
 import torch
 from torch.utils.data import DataLoader
@@ -21,6 +24,8 @@ PROJECT = Path(__file__).resolve().parent
 REPO = PROJECT.parents[1]
 # A different output directory or plan cannot create a second attempt.
 ONCE_GUARD = "outputs/frozen_test_once_20261026.guard.json"
+PERSIST_REPLACE_ATTEMPTS = 6
+PERSIST_RETRY_INITIAL_SECONDS = 0.025
 MODEL_EPOCHS = (("baseline_unet", 5), ("improved_unet", 17))
 REQUIRED_SOURCES = {
     "modules.py", "dataset.py", "losses.py", "metrics.py", "train.py", "predict.py",
@@ -54,11 +59,65 @@ def read(path):
 
 
 def persist(path, value):
-    """Update only this attempt's own state, preserving completed model reports."""
+    """Atomically update this attempt, retrying only transient replacement I/O.
+
+    Each call owns a unique temporary file. Windows scanners/sync clients may
+    briefly hold the destination open; retry that PermissionError without
+    invoking model code again. A permanent error preserves the prior target.
+    """
     path = Path(path)
-    temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    temporary.replace(path)
+    serialized = json.dumps(value, indent=2, allow_nan=False) + "\n"
+    temporary, failure = None, None
+    try:
+        descriptor, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+        temporary = Path(name)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(serialized)
+            handle.flush()
+            os.fsync(handle.fileno())
+        for attempt in range(PERSIST_REPLACE_ATTEMPTS):
+            try:
+                os.replace(temporary, path)
+                temporary = None
+                return
+            except PermissionError:
+                if attempt + 1 == PERSIST_REPLACE_ATTEMPTS:
+                    raise
+                time.sleep(PERSIST_RETRY_INITIAL_SECONDS * 2 ** attempt)
+    except BaseException as error:
+        failure = error
+        raise
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError as cleanup_error:
+                if failure is None:
+                    raise
+                failure.add_note(f"Could not remove this call's temporary file {temporary}: {cleanup_error}")
+
+
+def finalize_report(report, output_dir, guard, primary_error=None):
+    """Try both state destinations without masking an existing model error."""
+    first_persistence_error = None
+    destinations = ([output_dir / "evaluation.json"] if output_dir.exists() else []) + [guard]
+    for path in destinations:
+        try:
+            persist(path, report)
+        except BaseException as error:
+            report.setdefault("persistence_errors", []).append(
+                {"path": str(path), "type": type(error).__name__, "message": str(error)})
+            if primary_error is not None:
+                primary_error.add_note(f"Final state persistence also failed for {path}: {type(error).__name__}: {error}")
+            elif first_persistence_error is None:
+                first_persistence_error = error
+                report["status"] = "incomplete"
+                report["error"] = {"type": type(error).__name__, "message": str(error)}
+            else:
+                first_persistence_error.add_note(
+                    f"Final state persistence also failed for {path}: {type(error).__name__}: {error}")
+    if first_persistence_error is not None:
+        raise first_persistence_error
 
 
 def inside(root, name):
@@ -286,6 +345,7 @@ def execute(args, root=None, project=None, allow_cpu_for_synthetic=False):
               "test_split_read": True, "new_training": False, "post_test_tuning": False,
               "claim_boundary": "One final test pass per frozen model. No test-based model, epoch, threshold or hyperparameter selection. Numeric case is a grouping proxy and ID5 interpretation retains the accepted derivative-ID assumption."}
     guard = claim_once(root, report)
+    primary_error = None
     try:
         output_dir.mkdir(parents=True)
         persist(output_dir / "evaluation.json", report)
@@ -305,6 +365,7 @@ def execute(args, root=None, project=None, allow_cpu_for_synthetic=False):
         report.update(status="passed", full_test_passes_per_model=1, protected_original_files_unchanged=True,
                       frozen_sources_and_weights_unchanged=True)
     except BaseException as error:
+        primary_error = error
         report["status"] = "incomplete"
         report["error"] = {"type": type(error).__name__, "message": str(error)}
         for entry in report["models"].values():
@@ -312,9 +373,7 @@ def execute(args, root=None, project=None, allow_cpu_for_synthetic=False):
                 entry["status"] = "incomplete"
         raise
     finally:
-        if output_dir.exists():
-            persist(output_dir / "evaluation.json", report)
-        persist(guard, report)
+        finalize_report(report, output_dir, guard, primary_error)
     print(f"Completed one frozen test pass per model: {output_dir}", flush=True)
     return report
 
