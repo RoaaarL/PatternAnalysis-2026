@@ -663,3 +663,15 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">复核曾发现初稿把预测ID5整列命名为FP来源，误包含TP格。最终代码保留整列为predicted_id5_true_class_counts，另将真ID5位置置0得到FP来源，并断言两者的TP／FP总和；修正后在新v2目录完整重放，v1保留并标superseded。此为新诊断字段修复，原正式混淆矩阵／分数与权重从未被修改。</span>
 
 <span style="color: purple;">evidence/selection_diagnosis_20261026.json保存20轮历史、三模型全验证／逐类NLL／固定集合／case组汇总、候选规则与五例数值、73项检查记录和原正式证据hash；PNG只含聚合图，没有MRI。完整660片逐片统计及含MRI图留在忽略的v2输出目录。所有原正式证据、9份冻结源码、三份权重及旧仓库保持；当前第21次提交只对应实际诊断源码、检查、汇总与带紫色标记说明。仍没有测试集评估，check-off和originality状态不由自动检查改变。</span>
+
+## <span style="color: purple;">统一ID5选模的重新训练（2026-10-26）</span>
+
+<span style="color: purple;">用户在第21次提交之后明确批准：两模型统一按全验证pixel-pooled ID5 Dice最大选模，数值完全并列时选validation CE更低，再选更早epoch；分别从头重新训练20完整轮，保留原实验，仍不评估测试集。批准原文记录在evidence/id5_retrain_approval_20261026.json，46份原证据／正式输出的运行前摘要保存在id5_prior_records_20261026.json。此前CE选模实验和失败诊断保持原样，不用新实验覆盖旧记录。</span>
+
+<span style="color: purple;">本组只改变选模与checkpoint保留：id5_best.pt按(-Dice5, CE, epoch)取最小；ce_best.pt按(CE, epoch)取最小；last.pt保留最后一轮；best.pt为本次主要规则所选权重的兼容别名。所有精确并列均不加人为容差；未定义的ID5 Dice不成为ID5-best，非法非有限分数应明确报错。训练损失仍为原有效区域CE，选模比较不参与反向传播。</span>
+
+<span style="color: purple;">模型、归一化／补边／valid mask、11460训练与660验证配对清单、seed3710、Adam lr0.001、B4、FP32、20轮／57300更新、无增强／AMP／scheduler及验证汇总口径不变。新运行使用新的baseline_id5_formal_20261026和improved_id5_formal_20261026输出目录，不加载旧best或last继续训练。训练依赖源码和计划在实际运行前冻结；CPU检查及新checkpoint恢复／全验证重放通过后再报告完成，不把准备工作写成训练结果。</span>
+
+<span style="color: purple;">AI使用披露：本组由Codex实现选模／保存改动、检查并执行用户批准的重新训练；用户的本次指令提供授权，不表示用户亲自运行、独立实现或已理解全部代码。ID5=前列腺继续采用此前已接受、未独立证明的派生标签保留ID假设。训练与验证资源阶段沿用原记录方法，测试数据不参与训练、选模或本组检查。</span>
+
+<span style="color: purple;">运行前检查已完成：原73项加9项选模／保存和10项独立汇总检查，共92项通过、0跳过；其余8核心文件hash与原正式计划一致，run_epoch及seed等9个辅助函数AST未变，DataLoader／模型／Adam初始化段文本一致。独立CPU参考前向检查两架构的Python／NumPy／Torch RNG与模型state不变。evidence/id5_preflight_20261026.json记录这些检查；第22次提交保存实现、批准原文和运行前证据，此时两模型的新正式训练尚未开始。</span>

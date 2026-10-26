@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import random
+import shutil
 import sys
 import time
 
@@ -15,6 +16,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from dataset import HipMRIPairDataset, collate_padded, collect_pairs, load_pair, patient_ids
+from checkpoint_selection import SELECTION_RULES, checkpoint_candidate, checkpoint_key, is_better_checkpoint
 from losses import segmentation_cross_entropy
 from metrics import SegmentationMetrics
 from modules import build_model
@@ -135,6 +137,9 @@ def validate_formal_plan(args, training_pairs, validation_pairs):
         raise ValueError(f"CLI differs from the approved formal protocol: {expected}")
     if args.model not in protocol["models"]:
         raise ValueError("Model not listed in the approved plan.")
+    planned_selection = plan.get("metrics_and_model_selection", {}).get("checkpoint_selection", {}).get("selection_metric", "ce")
+    if getattr(args, "selection_metric", "ce") != planned_selection:
+        raise ValueError("CLI checkpoint selection differs from the approved formal plan.")
     for split, pairs in (("training", training_pairs), ("validation", validation_pairs)):
         if manifest_hash(pairs) != plan["data"][split]["manifest_sha256"]:
             raise ValueError(f"{split} manifest differs from the frozen plan.")
@@ -180,6 +185,8 @@ def parse_args():
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--reference-name", default="case_004_week_0_slice_12.nii.gz")
     parser.add_argument("--formal-plan", type=Path, help="Approved frozen protocol and source/manifest hashes; optional for smoke checks.")
+    parser.add_argument("--selection-metric", choices=tuple(SELECTION_RULES), default="ce",
+                        help="Primary checkpoint rule; ID5 uses exact ties by lower CE, then earlier epoch.")
     parser.add_argument("--progress-every", type=int, default=500, help="Training batch progress interval; zero disables it.")
     args = parser.parse_args()
     if min(args.epochs, args.batch_size, args.base_channels) <= 0 or args.num_classes < 2 or args.lr <= 0:
@@ -188,10 +195,15 @@ def parse_args():
         parser.error("train-limit must be positive")
     if args.progress_every < 0:
         parser.error("progress-every must be nonnegative")
+    if args.selection_metric == "id5_dice" and args.num_classes <= 5:
+        parser.error("ID5 selection requires at least six classes")
     return args
 
 
 def execute_training(args):
+    selection_metric = getattr(args, "selection_metric", "ce")
+    if selection_metric not in SELECTION_RULES or (selection_metric == "id5_dice" and args.num_classes <= 5):
+        raise ValueError("ID5 selection requires at least six classes and a supported selection metric.")
     if args.output_dir.exists():
         raise FileExistsError(f"Use a new output directory to preserve prior run evidence: {args.output_dir}")
     if args.device == "cuda" and not torch.cuda.is_available():
@@ -227,7 +239,13 @@ def execute_training(args):
         "status": "running", "model": args.model, "model_config": config,
         "parameters": sum(parameter.numel() for parameter in model.parameters()),
         "optimizer": {"name": "Adam", "lr": args.lr}, "objective": "valid-region one-hot cross-entropy",
-        "selection_metric": "minimum full-validation cross_entropy", "seed": args.seed,
+        "selection_metric": SELECTION_RULES[selection_metric], "seed": args.seed,
+        "checkpoint_selection": {
+            "primary_metric": selection_metric, "primary_rule": SELECTION_RULES[selection_metric],
+            "ce_rule": SELECTION_RULES["ce"], "id5_rule": SELECTION_RULES["id5_dice"],
+            "files": {"primary": "best.pt", "id5_best": "id5_best.pt", "ce_best": "ce_best.pt", "last": "last.pt"},
+            "primary": None, "id5_best": None, "ce_best": None, "last": None,
+        },
         "device": str(device), "gpu_name": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
         "versions": {"python": sys.version.split()[0], "python_torch": str(torch.__version__), "numpy": np.__version__,
                      "cuda_runtime": torch.version.cuda, "cudnn": torch.backends.cudnn.version()},
@@ -259,7 +277,7 @@ def execute_training(args):
         report["claim_boundary"] = "Approved fixed-budget training/validation run. A paired comparison requires both runs complete and verified. No test evaluation."
         report["primary_report_metric"] = "full-validation pixel-pooled dice_per_class[5]"
         report["label_mapping_note"] = "The user accepted the working assumption that the course derivative preserves provider IDs (ID5=Prostate); this is not independent provenance proof."
-    best_loss, best_logits, best_epoch = float("inf"), None, None
+    best_logits = None
     started = time.perf_counter()
     try:
         report["reference_ce_before_training"], _ = measured_call(
@@ -280,14 +298,36 @@ def execute_training(args):
             )
             record = {"epoch": epoch, "training": training, "validation": validation}
             report["epochs"].append(record)
+            candidate = checkpoint_candidate(epoch, validation)
+            # Fail rather than silently fall back to CE if the primary ID5
+            # metric is undefined. CE-only legacy smoke runs may omit ID5.
+            checkpoint_key(candidate, selection_metric)
+            selection = report["checkpoint_selection"]
+            ce_improved = is_better_checkpoint(candidate, selection["ce_best"], "ce")
+            id5_improved = candidate["validation_id5_dice"] is not None and is_better_checkpoint(candidate, selection["id5_best"], "id5_dice")
+            primary_improved = is_better_checkpoint(candidate, selection["primary"], selection_metric)
+            report["checkpoint_selection"] = {
+                **selection, "last": candidate,
+                "ce_best": candidate if ce_improved else selection["ce_best"],
+                "id5_best": candidate if id5_improved else selection["id5_best"],
+                "primary": candidate if primary_improved else selection["primary"],
+            }
             checkpoint = {"model": args.model, "model_config": config, "model_state": model.state_dict(),
                           "optimizer_state": optimizer.state_dict(), "epoch": epoch, "seed": args.seed,
-                          "validation_cross_entropy": validation["cross_entropy"], "limited_training_smoke": report["limited_training_smoke"]}
+                          "validation_cross_entropy": validation["cross_entropy"],
+                          "validation_id5_dice": candidate["validation_id5_dice"],
+                          "selection_metric": selection_metric, "selection_rule": SELECTION_RULES[selection_metric],
+                          "checkpoint_selection": report["checkpoint_selection"],
+                          "limited_training_smoke": report["limited_training_smoke"]}
             torch.save(checkpoint, args.output_dir / "last.pt")
-            if validation["cross_entropy"] < best_loss:
-                best_loss, best_epoch = validation["cross_entropy"], epoch
+            if ce_improved:
+                torch.save(checkpoint, args.output_dir / "ce_best.pt")
+            if id5_improved:
+                torch.save(checkpoint, args.output_dir / "id5_best.pt")
+            if primary_improved:
                 _, best_logits = reference_probe(model, reference_sample, device)
-                torch.save(checkpoint, args.output_dir / "best.pt")
+                primary_file = "id5_best.pt" if selection_metric == "id5_dice" else "ce_best.pt"
+                shutil.copyfile(args.output_dir / primary_file, args.output_dir / "best.pt")
             print(f"epoch {epoch}/{args.epochs}: train CE={training['cross_entropy']:.6f}; validation CE={validation['cross_entropy']:.6f}; validation ID5 Dice={validation['dice_per_class'][5] if args.num_classes > 5 else None}; valid pixels={validation['valid_pixels']}", flush=True)
             (args.output_dir / "run_summary.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         report["first_parameter_max_abs_change"] = float((next(model.parameters()).detach().cpu() - initial_parameter).abs().max())
@@ -303,7 +343,10 @@ def execute_training(args):
                 torch.testing.assert_close(restored_logits, best_logits, rtol=1e-5, atol=1e-6)
         finally:
             report["resource_stages"].append(restoration.result)
-        report["checkpoint_reload"] = {"passed": True, "best_epoch": best_epoch, "best_validation_cross_entropy": best_loss,
+        primary = report["checkpoint_selection"]["primary"]
+        report["checkpoint_reload"] = {"passed": True, "best_epoch": primary["epoch"],
+                                       "best_validation_cross_entropy": primary["validation_cross_entropy"],
+                                       "best_validation_id5_dice": primary["validation_id5_dice"], "selection_metric": selection_metric,
                                        "reference_ce": restored_ce, "reference_logit_max_abs_difference": float((restored_logits - best_logits).abs().max())}
         report["optimizer_steps"] = sum(record["training"]["optimizer_steps"] for record in report["epochs"])
         report["peak_cuda_allocated_bytes"] = max(stage["peak_cuda_allocated_bytes"] for stage in report["resource_stages"]) if device.type == "cuda" else None
@@ -322,7 +365,7 @@ def execute_training(args):
     finally:
         report["elapsed_seconds"] = round(time.perf_counter() - started, 3)
         (args.output_dir / "run_summary.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    print(f"Completed {args.model} run: {args.output_dir.resolve()}; optimizer steps={report['optimizer_steps']}; best epoch={best_epoch}", flush=True)
+    print(f"Completed {args.model} run: {args.output_dir.resolve()}; optimizer steps={report['optimizer_steps']}; primary best epoch={report['checkpoint_selection']['primary']['epoch']}", flush=True)
 
 
 def main():
