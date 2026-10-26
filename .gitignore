@@ -12,3 +12,11 @@ checkpoints/
 *.pt
 *.pth
 *.ckpt
+
+# Preserve exclusions used by the earlier course checkout and local reproductions.
+.cache/
+runs/
+pdf_preview*/
+tmp/
+*.npy
+*.npz
