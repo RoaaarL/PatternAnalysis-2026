@@ -737,3 +737,19 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">profile沿用原共享方法：两模型各4组固定seed合成输入，FP32、eval／inference_mode、每组10次warmup和50次同步前向，p95用numpy linear percentile；没有optimizer或测试像素，排除权重加载、磁盘、传输、指标和绘图。8组全部50次原始计时及各自allocator峰值均保存并重新核对median／p95。结果是本机当次快照，波动和组间差异如实保留；没有为得到更好数字反复测量或把B4批毫秒直接当单张延迟。</span>
 
 <span style="color: purple;">第23次提交记录本组实际结果：id5_baseline_20261026.json和id5_improved_20261026.json保留完整20轮／42阶段与恢复检查，省略完整训练文件名；id5_comparison_20261026.json整合独立排序、状态／旧轨迹对照、全验证重放与资源关联；两份id5_*_profile_20261026.json保存原始计时；id5_execution_20261026.json保存真实命令及两个exit0；id5_run_plan_20261026.json是运行前冻结计划；id5_selection_curves_20261026.png只含聚合曲线且已实际查看，不含MRI。原正式证据、原权重与旧仓库保持，本地Git保留全部历史，没有发布／强推或测试集评估。</span>
+
+## <span style="color: purple;">冻结后的单次测试评估（2026-10-26）</span>
+
+<span style="color: purple;">用户在第23次提交后明确授权：冻结baseline第5轮和Improved第17轮及共享预处理／评估规则，然后测试集各评估一次，不根据测试结果调参。本次批准原文与模型／规则在任何测试清单、头信息或像素检查前写入frozen_test_recipe_20261026.json，摘要6da9a3f7ad807601f0f1650b5f671138768e99dd1e87b8263c6bed4934ec54fa。两个ID5-best复制到忽略的outputs/frozen_models_20261026；副本与原文件字节一致，不覆盖原权重，78份先前证据／输出另存保护摘要。</span>
+
+<span style="color: purple;">冻结baseline权重SHA为01443fb576874406c179e19ecf45df7b3424dc8ac460f51daf78712496d4aef3；Improved为9f3997dcd898c1ad7e0bb1db1b832cc414241e98d4dab8e19b0595877871d1fe。预处理及指标仍调用原dataset.py／losses.py／metrics.py和validation run_epoch，原10份核心依赖不修改。每片min-max、右／下补边、原有效像素与mask ID保留、batch4、既有文件排序、动态collate、无shuffle及保留末批都不变；尤其Improved InstanceNorm可受补边影响，不能随意改变批次组成后声称同一评估。</span>
+
+<span style="color: purple;">主要指标预定为全测试有效像素pooled ID5 Dice；次级指标为六类Dice／IoU、排除ID0及双空类的macro Dice／IoU、按有效像素数加权的CE及pixel accuracy。预测用六类argmax，无TTA、阈值选择或测试后重选模型；双空类为null且不入macro，空参考中的误分为0分。ID5=前列腺继续采用此前用户接受、未独立证明的派生保留ID假设。</span>
+
+<span style="color: purple;">audit_test_manifest.py先复用配对清单与numeric case代理分组检查，再只读取测试NIfTI header和压缩文件字节摘要，不调用get_fdata或模型。实际得到540对、case40／41／42，与11460训练和660验证配对的case组两两无交叉；全部540对为256×128，Affines逐值匹配且为identity，qform0／sform2，空间单位均unknown。该检查不证明独立患者身份、解剖对齐、毫米单位、标签语义或无其他旧项目暴露。test_manifest_audit_20261026.json保留每对文件摘要，内容清单SHA为05ecea02f67e8b3c96d028ab9accaa5fa55813a27ceef2f261ae39e48423eea5。</span>
+
+<span style="color: purple;">evaluate_frozen_test.py将在第一次前向前原子创建固定outputs/frozen_test_once_20261026.guard.json，绑定冻结计划、权重和测试清单；换输出目录不能再次评估，异常也保留claim与已完成结果。两个模型逐个加载，只调用一次完整测试run_epoch、eval且关闭梯度、无optimizer／backward。检查与最终报告只重算保存的混淆矩阵和统计，不额外测试前向；评估前后只对压缩字节做一致性核对。</span>
+
+<span style="color: purple;">AI使用披露：本组实现、构造检查、前置审计及后续真实运行均由Codex执行；用户本次指令提供运行授权，不等同于亲自实现、验证或已理解全部代码。旧训练／验证／诊断记录保持历史原文；在本段运行前记录时，尚未做实际模型测试评估。冻结方案不用于证明无关早期项目从未接触同一测试数据。</span>
+
+<span style="color: purple;">运行前完整114项检查通过、0跳过（原92＋输入审计10＋冻结评估12），日志及摘要关联在frozen_test_preflight_20261026.json。构造检查含4＋1尾批、有效像素加权CE及手算混淆矩阵、逐模型仅一遍、无梯度／state更新、原子固定guard、改plan／输出不能重跑、第二模型失败保留第一结果；另有4种冻结链错绑定在claim／forward前拒绝。第24次提交保存新脚本、检查、测试前模型／规则冻结记录与header／字节审计；实际测试模型前向尚未开始，最终执行计划在这次源码提交后另行冻结。</span>
