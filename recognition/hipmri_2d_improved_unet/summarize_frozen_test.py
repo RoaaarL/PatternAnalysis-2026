@@ -190,7 +190,8 @@ def save_aggregate_figure(results, output):
     os.environ.setdefault("MPLCONFIGDIR", str(output.parent / ".matplotlib"))
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(10, 5.5), layout="constrained")
+    fig, ax = plt.subplots(figsize=(10, 6.4))
+    fig.subplots_adjust(left=.08, right=.98, top=.90, bottom=.22)
     xs = list(range(6))
     for name, offset, color, label in (
         ("baseline_unet", -.18, "tab:blue", "Baseline epoch5: original full pass"),
@@ -208,7 +209,7 @@ def save_aggregate_figure(results, output):
            title="Frozen test comparison: 540 slices; unchanged model and evaluation rules")
     ax.legend(loc="lower left", fontsize=9)
     ax.grid(axis="y", alpha=.2)
-    fig.text(.5, -.015,
+    fig.text(.5, .035,
              "Baseline: 135 forwards once. Improved: 111 incomplete + 135 authorized forwards; only the full rerun supplies its score.\n"
              "ID5 organ interpretation retains the accepted derivative-ID assumption; no test-based tuning.",
              ha="center", fontsize=8)

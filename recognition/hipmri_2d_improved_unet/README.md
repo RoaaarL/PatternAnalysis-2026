@@ -767,3 +767,43 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">因用户要求每模型一次，Codex没有静默重跑；先修复、检查并说明已经发生的444张重复风险，再询问是否只允许Improved补做一次完整评估。用户明确回答“允许，仅补跑 Improved”，原问题及回复保存在frozen_test_recovery_approval_20261026.json。额外授权只覆盖同一第17轮权重／同一规则的一个完整补跑，baseline不再前向、原失败guard与原始结果保留；新恢复使用独立固定guard。模型／轮次／超参数／阈值没有因测试结果调整。第25次提交将记录故障、I/O修复、授权与受限恢复实现，补跑结果在执行后另记，不能声称从未重复测试计算。</span>
 
 <span style="color: purple;">受限恢复入口recover_frozen_test.py只对原Improved第17轮调用一次共享evaluate_model；baseline仅在CPU核算原混淆矩阵，不构建模型。它校验用户额外授权、原attempt与guard／baseline一致、同权重／同规则／同数据与runtime、新固定recovery guard，保存原444张重复的计划值及实际值，失败不自动再推理。完整129项检查通过、0跳过（121＋恢复8），关联frozen_test_recovery_preflight_20261026.json；另有纯JSON汇总器summarize_frozen_test.py，检查两份完整结果与暴露次数，只从保存的混淆矩阵重算分数和绘制聚合图，不接触测试像素或模型。</span>
+
+### <span style="color: purple;">获准补跑完成后的最终测试结果</span>
+
+<span style="color: purple;">恢复源码实际冻结在第25次提交2e4ba13a4780f38385fc32d77737d24fd8eae33b，新执行计划frozen_test_recovery_plan_20261026.json摘要900af9e198458f3a2c6bc19512e9861c892d86d65118e84774ce05fbd464bb88。仅Improved第17轮完成获准的135批／540张／17694720有效像素，0更新，运行前后state相同且与原中断模型的运行前state相同；baseline在这次恢复中构建／前向均为0。新guard为passed，原guard仍保留incomplete；13份恢复依赖和94份受保护记录、两份冻结副本及原权重摘要全部匹配。</span>
+
+<table style="color: purple;">
+<tr><th>完整测试指标</th><th>Baseline 第5轮</th><th>Improved 第17轮</th></tr>
+<tr><td>ID5 Dice ↑</td><td>0.843161</td><td>0.844222</td></tr>
+<tr><td>ID5 IoU ↑</td><td>0.728850</td><td>0.730435</td></tr>
+<tr><td>有效像素CE ↓</td><td>0.055552</td><td>0.071634</td></tr>
+<tr><td>前景macro Dice，排除ID0 ↑</td><td>0.906227</td><td>0.915912</td></tr>
+<tr><td>前景macro IoU，排除ID0 ↑</td><td>0.835422</td><td>0.850269</td></tr>
+<tr><td>pixel accuracy ↑</td><td>0.977617</td><td>0.978941</td></tr>
+</table>
+
+<table style="color: purple;">
+<tr><th>原类别ID的测试Dice</th><th>Baseline</th><th>Improved</th></tr>
+<tr><td>0</td><td>0.996669</td><td>0.997206</td></tr>
+<tr><td>1</td><td>0.983693</td><td>0.984636</td></tr>
+<tr><td>2</td><td>0.934470</td><td>0.936415</td></tr>
+<tr><td>3</td><td>0.959706</td><td>0.965891</td></tr>
+<tr><td>4</td><td>0.810103</td><td>0.848396</td></tr>
+<tr><td>5</td><td>0.843161</td><td>0.844222</td></tr>
+</table>
+
+<span style="color: purple;">主要ID5 Dice差为0.0010601725377956672，约0.106个百分点；前景macro Dice高0.009685，CE则高0.016081。本批测试各类pixel-pooled Dice均略高，ID4差较大；这不代表每张／每个case都改善。两模型ID5参考像素均60035；从保存矩阵可见baseline TP／FP／FN=48408／6382／11627，Improved=53099／12660／6936，更多检出同时伴随更多误分。只根据此小幅目标收益不能断言额外模型成本值得；参数与此前公平资源profile仍保留，不据测试结果回头换epoch、阈值或修改训练。</span>
+
+<span style="color: purple;">暴露次数如实记录：baseline原135次forward／540张，恢复0次；Improved原111次／444张中断，再经用户明确许可完整135次／540张，累计246次batch forward、984张次，前444张重复。完整Improved分数只来自获准补跑，没有恢复／合并原部分统计；不能说Improved从未重复评估。两份完整评分的参数均无梯度、0更新，preprocessing／argmax／B4顺序／loss／指标规则未改。后处理仅读取保存JSON、核对SHA并重算CM对应重叠／macro／accuracy；CE保留完整共享loss原值。生成和复核报告没有新的模型前向或测试像素读取。</span>
+
+<table style="color: purple;">
+<tr><th>实际完整测试阶段记录</th><th>Baseline原完整遍历</th><th>Improved获准补跑</th></tr>
+<tr><td>allocated／reserved peak MiB</td><td>67.576／100.000</td><td>104.313／138.000</td></tr>
+<tr><td>阶段墙钟秒</td><td>3.611</td><td>8.732</td></tr>
+</table>
+
+<span style="color: purple;">测试阶段包含数据I/O、指标及进度落盘；baseline使用原记录实现，Improved补跑使用含fsync／重试的修复实现，缓存和系统状态也不同。这些时间不是公平的架构纯前向延迟比较；显存为各阶段注明resident对象及分配器缓存的绝对PyTorch峰值，不是总GPU显存。原Improved中断阶段单独保存在故障证据中，不与完整补跑混算。此前统一合成profile才是保留相同测量方法的资源证据，本组没有为了更好数字重测profile。</span>
+
+<span style="color: purple;">第26次提交保存最终frozen_test_recovery_20261026.json（完整原始恢复记录）、frozen_test_improved_20261026.json（本次完整Improved）、frozen_test_comparison_20261026.json（来源／指标／暴露及检查汇总）、frozen_test_comparison_20261026.png（只含聚合图）及实际运行前的recovery plan。原baseline、原失败、两份guard、console和所有旧实验均保留。聚合图已实际查看；只调整后处理图的留白以避免轴标题与披露重叠，新旧后处理的全部数值／来源字段逐对象相同，未改13份冻结评估依赖。数据／权重／含MRI图片仍不入Git，当前只本地提交。</span>
+
+<span style="color: purple;">本结论限于提供测试划分中的540张、3个filename case代理组；没有case等权、统计显著性、独立身份、毫米几何或临床达标保证。ID5仍按接受的派生ID保留假设解释。已完成冻结比较与明确授权的故障补跑，不把测试分数用于后续模型或超参数选择，也不把自动检查改记为用户独立实现／课程check-off通过。</span>
