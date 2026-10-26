@@ -675,3 +675,65 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">AI使用披露：本组由Codex实现选模／保存改动、检查并执行用户批准的重新训练；用户的本次指令提供授权，不表示用户亲自运行、独立实现或已理解全部代码。ID5=前列腺继续采用此前已接受、未独立证明的派生标签保留ID假设。训练与验证资源阶段沿用原记录方法，测试数据不参与训练、选模或本组检查。</span>
 
 <span style="color: purple;">运行前检查已完成：原73项加9项选模／保存和10项独立汇总检查，共92项通过、0跳过；其余8核心文件hash与原正式计划一致，run_epoch及seed等9个辅助函数AST未变，DataLoader／模型／Adam初始化段文本一致。独立CPU参考前向检查两架构的Python／NumPy／Torch RNG与模型state不变。evidence/id5_preflight_20261026.json记录这些检查；第22次提交保存实现、批准原文和运行前证据，此时两模型的新正式训练尚未开始。</span>
+
+### <span style="color: purple;">这一组代码怎样接在共享训练流程上</span>
+
+<span style="color: purple;">checkpoint_selection.py只接收轮次、已完成的全验证CE和dice_per_class[5]。它不接触图像、模型梯度或测试数据：把ID5候选变成(-Dice5, CE, epoch)元组，按从左到右的通常比较取更小者。负号让更高Dice排在前面；只有Dice完全相等才比较CE，两个分数都完全相等才比较轮次。CE-best独立用(CE, epoch)，不会因ID5主规则改变而丢失原CE最小模型。</span>
+
+<span style="color: purple;">train.py仍先完成一轮训练，再以eval／关闭梯度跑完整验证集。得到同一混淆矩阵及分数后，才分别更新三个角色并保存；主角色改善时复制对应文件为best.pt，并记录固定训练参考图的eval logits，训练结束恢复主checkpoint核对。保存不会进入反向传播；额外参考前向不会采样Dropout或改变下一轮的shuffle随机源。每个checkpoint同时记录模型配置、模型／Adam状态、epoch、CE、ID5 Dice和当时的角色摘要。</span>
+
+<span style="color: purple;">构造检查使用4个手写候选：第1轮(Dice0.7, CE0.1)，第2轮(0.8, 0.3)，第3轮(0.8, 0.2)，第4轮(0.8, 0.2)。应保存ID5-best第3轮、CE-best第1轮、last第4轮，best与第3轮文件字节一致。这个例子检查保存逻辑，不是MRI训练结果。另一项检查用相邻浮点值证明微小真实提升不会被随意当作并列。</span>
+
+<span style="color: purple;">run_id5_retraining.py读取冻结计划，先检查原记录摘要与两个新输出路径，再按baseline→Improved启动相同参数的两次train.py，分别保留完整控制台日志和执行状态。verify_id5_runs.py使用独立排序实现核对20轮候选，重算每轮混淆矩阵对应指标、检查所有权重与Adam步数，再恢复两份ID5-best各跑完整660张验证图。它还将新旧每轮数值及CE-best／last的模型和Adam张量实际比较；相同才记录相同，不从同一个seed直接推断复现。</span>
+
+### <span style="color: purple;">实际完成的20轮及选中结果</span>
+
+<span style="color: purple;">本次训练依赖冻结在第22次提交caf189540331e4c1b914ba18e194d98d08f01f1c；新计划id5_run_plan_20261026.json在实际运行前保存，摘要为4b2a97ee5eb918058fa52a9d50f110f7c405d590dd176646c3574c309834a011。两模型均从头完成20轮、每轮11460训练与660验证样本、各57300次optimizer更新；未恢复旧权重继续训练，未减少batch或增加轮数。所有原始日志、四份权重、逐轮完整摘要及曲线留在忽略的outputs/baseline_id5_formal_20261026和outputs/improved_id5_formal_20261026。</span>
+
+<table style="color: purple;">
+<tr><th>保存角色</th><th>baseline epoch</th><th>Improved epoch</th></tr>
+<tr><td>ID5-best／best.pt主模型</td><td>5</td><td>17</td></tr>
+<tr><td>CE-best</td><td>5</td><td>3</td></tr>
+<tr><td>last</td><td>20</td><td>20</td></tr>
+</table>
+
+<span style="color: purple;">这是20轮预算内的模型选择，不是第5／17轮提前停止训练。两份best.pt与各自id5_best.pt字节完全相同；每个角色的epoch、CE、Dice、当轮候选摘要、finite模型／Adam张量和Adam更新次数均经独立核查。Improved第17轮本次实际保存并恢复了权重，原实验仍仅有其历史汇总，不把新权重伪称为原缺失checkpoint。</span>
+
+<table style="color: purple;">
+<tr><th>ID5主模型的全验证指标</th><th>baseline 第5轮</th><th>Improved 第17轮</th></tr>
+<tr><td>ID5 Dice ↑</td><td>0.816567</td><td>0.834394</td></tr>
+<tr><td>ID5 IoU ↑</td><td>0.689999</td><td>0.715846</td></tr>
+<tr><td>有效像素CE ↓</td><td>0.066359</td><td>0.117149</td></tr>
+<tr><td>前景macro Dice，排除ID0 ↑</td><td>0.903274</td><td>0.896437</td></tr>
+</table>
+
+<span style="color: purple;">Improved在相同ID5规则下比baseline高0.017827 Dice，约1.783个百分点；但CE更高、前景macro Dice低0.006837。真实ID3 Dice为baseline0.920924、Improved0.845060，因此不能把优先ID5的结果称为所有类别整体改善。六类Dice／IoU及完整混淆矩阵均保留在新证据中。仅一个seed、4个case代理验证组，这些是验证选模结果，不是测试、临床达标或统计显著性结论。</span>
+
+<span style="color: purple;">两模型新旧20轮训练／验证的CE、全部混淆矩阵、各类Dice／IoU、macro、accuracy、有效像素、批次／样本／更新数及训练梯度范围全部逐值相同；排除耗时后各模型460个字段一致。新CE-best与原best、新last与原last的模型和Adam状态亦全部逐张量及标量一致。故本次主模型变化来自选模／保留策略，没有改变训练算法或证明新的训练增益；相同轨迹是本次实际核对结果，不是跨环境复现保证，也不是独立seed重复实验。</span>
+
+### <span style="color: purple;">恢复、资源和交付证据</span>
+
+<span style="color: purple;">两份ID5-best均在eval／关闭梯度下各重放完整660张验证图，165批、0更新；混淆矩阵及所有重叠指标与所选轮严格相同，CE差均为0，模型state摘要前后相同且没有新梯度。训练结束时固定参考图恢复logit最大差也均为0。46份原记录与10份新冻结依赖摘要仍匹配。92项运行前检查与这些真实运行核查分开记录，不把自动通过等同于用户独立理解或originality/check-off通过。</span>
+
+<table style="color: purple;">
+<tr><th>资源项目</th><th>baseline</th><th>Improved</th></tr>
+<tr><td>参数量</td><td>1940902</td><td>3190194</td></tr>
+<tr><td>训练阶段最大allocated／reserved MiB</td><td>182.642／250.000</td><td>567.992／694.000</td></tr>
+<tr><td>验证阶段最大allocated／reserved MiB</td><td>92.182／250.000</td><td>141.250／694.000</td></tr>
+<tr><td>恢复阶段allocated／reserved MiB</td><td>52.998／250.000</td><td>84.844／694.000</td></tr>
+<tr><td>20轮run墙钟秒</td><td>2243.088</td><td>3549.024</td></tr>
+</table>
+
+<span style="color: purple;">两次run合计5792.112秒，约96.54分钟，不含启动配对、最终独立重放和额外profile。42个阶段／模型均保存同步后的绝对PyTorch峰值，reserved包含分配器缓存；验证／恢复保留其注明的Adam及其他对象。这些不是总GPU显存或未测量的全进程峰值。墙钟含数据I/O、系统／缓存状态、额外保存和参考前向；实际耗时有波动，不能用新旧总时间推出架构纯计算速度或选模规则的加速效果。</span>
+
+<table style="color: purple;">
+<tr><th>新ID5-best的合成输入profile</th><th>baseline median／p95，批毫秒</th><th>Improved median／p95，批毫秒</th></tr>
+<tr><td>B1，256×128</td><td>1.146／3.072</td><td>4.776／8.876</td></tr>
+<tr><td>B1，256×144</td><td>1.432／1.574</td><td>11.024／12.495</td></tr>
+<tr><td>B4，256×128</td><td>1.347／1.477</td><td>10.747／12.402</td></tr>
+<tr><td>B4，256×144</td><td>3.134／4.028</td><td>10.756／12.267</td></tr>
+</table>
+
+<span style="color: purple;">profile沿用原共享方法：两模型各4组固定seed合成输入，FP32、eval／inference_mode、每组10次warmup和50次同步前向，p95用numpy linear percentile；没有optimizer或测试像素，排除权重加载、磁盘、传输、指标和绘图。8组全部50次原始计时及各自allocator峰值均保存并重新核对median／p95。结果是本机当次快照，波动和组间差异如实保留；没有为得到更好数字反复测量或把B4批毫秒直接当单张延迟。</span>
+
+<span style="color: purple;">第23次提交记录本组实际结果：id5_baseline_20261026.json和id5_improved_20261026.json保留完整20轮／42阶段与恢复检查，省略完整训练文件名；id5_comparison_20261026.json整合独立排序、状态／旧轨迹对照、全验证重放与资源关联；两份id5_*_profile_20261026.json保存原始计时；id5_execution_20261026.json保存真实命令及两个exit0；id5_run_plan_20261026.json是运行前冻结计划；id5_selection_curves_20261026.png只含聚合曲线且已实际查看，不含MRI。原正式证据、原权重与旧仓库保持，本地Git保留全部历史，没有发布／强推或测试集评估。</span>
