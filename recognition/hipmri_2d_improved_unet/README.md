@@ -40,6 +40,8 @@
 
 ## Artificial Intelligence Usage Disclosure
 
+<span style="color: purple;">2026-10-26选模与失败诊断新增协助：Codex核对20轮历史，仅重放现有baseline best5、Improved best3／last20，完成逐真类CE分解、固定像素集合比较、ID5转变计数、分组检查及5个确定规则案例的全图／放大图。新增6项手算诊断检查，完整73项通过；查看实际图像并由辅助代理独立核对数值。全部为训练后的验证诊断，未训练新模型、改原正式选模／结果或读取测试集；不记为用户亲自执行或已理解本组全部代码。</span>
+
 <span style="color: purple;">2026-10-26正式结果新增协助：Codex按用户已确认方案，在冻结源码7a8ffc2上从头执行baseline与Improved各20轮，完成各57300次更新，按验证CE选择权重；生成整集验证恢复核查、独立合成推理profile及对照曲线，查看实际图像并核对机器报告。全部运行、汇总、复核和提交由Codex及辅助代理完成；用户亲自完成的是前述两点理解回答与方案／工作假设确认，未据此记录为亲自运行、已理解所有代码或完成check-off。</span>
 
 <span style="color: purple;">2026-10-26资源记录与正式训练授权：用户正确解释参考图macro不能证明ID5效果，以及验证不能反向更新，并明确认可20轮方案及派生ID保留工作假设。Codex记录此确认，新增分阶段资源记录、推理性能入口、协议漂移与setup失败检查，再按批准方案执行训练／验证。自动检查、GPU运行与Git操作仍由Codex及辅助代理完成，不能记为用户亲自运行或独立实现。</span>
@@ -577,3 +579,87 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 <span style="color: purple;">同一源码／数据清单、20轮／57300更新、真实Adam控制项、finite权重、CE最早最小轮次、恢复指标、8组计时与峰值都经自动及辅助代理只读复核。当前仅一个seed和4个验证case代理组；这是训练／验证对照，不是独立测试、case等权结果、统计显著性证明或消融结论。旧0.8316／0.8233未充当新结果；测试集没有读取或评估，check-off和originality状态未被自动改成通过。</span>
 
 <span style="color: purple;">源码资源记录已在第19次提交；本次第20次提交对应实际已完成的正式结果、分析／恢复辅助脚本及说明。全部旧历史、旧仓库和旧PR保持；新仓库仍仅本地保存，不发布或强推。用户已确认的两个理解点与方案授权如实记录，不能扩展成用户亲自执行或独立实现本组全部代码。</span>
+
+## <span style="color: purple;">CE选模与ID5目标、验证失败诊断（2026-10-26）</span>
+
+<span style="color: purple;">本组从41ce4cc7cfb221d3913fd47a6484afc5d615f8b6开始，只做post-hoc验证诊断。原第20次提交的正式结论、CE选中权重及9份冻结核心源码保持。新分析不会把更高的后期Dice替换进原正式对照，也没有追加训练或测试评估。ID5仍仅在已接受的派生保留ID工作假设下解释为前列腺。</span>
+
+### <span style="color: purple;">为什么后期Dice更高，仍选第3轮</span>
+
+<table style="color: purple;">
+<tr><th>Improved位置</th><th>epoch</th><th>全验证CE</th><th>ID5 Dice</th><th>权重情况</th></tr>
+<tr><td>原规则CE最低</td><td>3</td><td>0.070507</td><td>0.800187</td><td>best.pt，已重放</td></tr>
+<tr><td>历史ID5最高</td><td>17</td><td>0.117149</td><td>0.834394</td><td>仅有当轮汇总，无该轮checkpoint</td></tr>
+<tr><td>最后一轮</td><td>20</td><td>0.117054</td><td>0.831574</td><td>last.pt，已重放</td></tr>
+</table>
+
+<span style="color: purple;">train.py使用严格更小的validation CE更新best；20轮CE的最小值确实在第3轮，因此代码正确执行了事先规则。第3轮按ID5排序仅为第18，第17轮按CE排序也为第18，两个目标的排序明显不一致。baseline则两者都在第5轮最佳。这里只能对保存的第3／20轮做空间和概率重放，不能假称恢复第17轮，也不从第20轮倒推缺失权重。</span>
+
+<table style="color: purple;">
+<tr><th>Improved的ID5全验证计数</th><th>第3轮</th><th>第20轮</th></tr>
+<tr><td>TP／FP／FN</td><td>75232／5585／31987</td><td>84463／11458／22756</td></tr>
+<tr><td>precision</td><td>0.930893</td><td>0.880548</td></tr>
+<tr><td>recall</td><td>0.701667</td><td>0.787761</td></tr>
+<tr><td>Dice</td><td>0.800187</td><td>0.831574</td></tr>
+</table>
+
+<span style="color: purple;">后期增加9231个真实ID5的净检出，同时净增5873个FP，Dice的TP／FP／FN组合得到改善。逐像素转换核查：12243个原FN被检出，3012个原TP又漏掉，净增9231；8242个新FP减去2369个消除的FP，净增5873。这解释重叠分数如何提高，不等于证明具体哪个网络模块导致变化。</span>
+
+### <span style="color: purple;">CE为什么反而上升：实测分解</span>
+
+<span style="color: purple;">validation_diagnostics.py复用共享segmentation_cross_entropy核对结果，再取每个valid像素的-log p_true。按真实类别c累计像素数n_c、NLL总和S_c；类内均值为S_c/n_c，对整集CE贡献为S_c/N。六类贡献相加重构CE；这是每像素正确类的log loss，不是直接相加六类错误。新diagnose_validation.py以相同B4重放三份权重，原混淆矩阵严格一致、共享CE相差小于1e-6，CPU float64分解与共享float32 reduction在容差内一致。</span>
+
+<span style="color: purple;">验证共有21626880个有效像素，真实ID5仅107219个（约0.496%），Body为70.332%。未加权CE按像素密度计权，未给ID5特别优先级；但像素多本身不能说明某类造成了CE恶化。实际第3→20轮的CE增量为0.046547，分解如下。</span>
+
+<table style="color: purple;">
+<tr><th>真实ID</th><th>类内均值NLL：3→20</th><th>对全局CE的增量</th><th>占净CE增量</th></tr>
+<tr><td>0</td><td>0.016398→0.027424</td><td>+0.001517</td><td>3.26%</td></tr>
+<tr><td>1</td><td>0.039453→0.042589</td><td>+0.002206</td><td>4.74%</td></tr>
+<tr><td>2</td><td>0.117356→0.235519</td><td>+0.015485</td><td>33.27%</td></tr>
+<tr><td>3</td><td>1.077869→2.597911</td><td>+0.026563</td><td>57.07%</td></tr>
+<tr><td>4</td><td>0.319076→0.330004</td><td>+0.000061</td><td>0.13%</td></tr>
+<tr><td>5</td><td>0.907028→1.051168</td><td>+0.000715</td><td>1.54%</td></tr>
+</table>
+
+<span style="color: purple;">ID3与ID2损失项合计约90.3%的增量，不能简化为“Body多数类造成”。连真实ID5自己的均值NLL也变差，因此分歧也不限于其他类别拖累：argmax区域重叠与赋给真类的概率损失本来就不同。ID5的FP来自真实ID0–4，只看真ID5 NLL也不能覆盖全部目标器官错误。</span>
+
+<span style="color: purple;">进一步固定同一批像素，将第3／20轮分成共同正确、被纠正、新增错误、共同错误四个互斥集合。共同错误350036个像素约占1.62%，均值NLL从2.683357升到5.544170，平均p_true从0.198454降到0.102246，其全局CE增量项为+0.046303；其余三集合的改善／恶化相抵后净+0.000244，合计还原总增量。这证明这些固定像素上真类概率更差；未测ECE，不能称为已证实校准变差，也没有证明最大错误类置信度变化或模块因果。</span>
+
+<span style="color: purple;">所以CE适合评价六类概率拟合，也监督ID5；以“优先最大化前列腺ID5 Dice”为选模目标时，它不直接对齐该目标，本次排序与数值已显示差异。CE训练损失和CE选模规则应分开讨论，这组诊断没有改变任何一个。evidence/selection_diagnosis_20261026.png给出历史CE–Dice关系、类内NLL及增量贡献。</span>
+
+### <span style="color: purple;">五个确定规则的失败／变化案例</span>
+
+<span style="color: purple;">按A→E固定顺序挑图并去重：A先找Improved best3的最差ID5阳性case/week组，再取R>=20的最高FN/R；B取R=0时FP最多；C取0<R<20时最高FN/R；D／E分别取R>=20时最大正／负Dice20−Dice3。并列按绝对计数及数值case／week／slice排序，候选空就明确not_available，不造fallback。20像素仅为诊断分箱。baseline只在同一切片上作对照，不参与选择。</span>
+
+<table style="color: purple;">
+<tr><th>案例及验证文件</th><th>参考ID5像素</th><th>baseline5 Dice</th><th>Improved3→20 Dice</th><th>实际观察</th></tr>
+<tr><td>A 漏分：case_038_week_0_slice_29</td><td>160</td><td>0</td><td>0→0.439024</td><td>两份best全部漏掉160像素；last20检出45、仍漏115</td></tr>
+<tr><td>B 空参考误分：case_039_week_5_slice_41</td><td>0</td><td>0</td><td>0→0</td><td>三模型FP为269／236／231；是相对参考的误分，不表示医学上该结构不存在</td></tr>
+<tr><td>C 少像素标注：case_037_week_0_slice_9</td><td>19</td><td>0</td><td>0→0</td><td>三者全部漏掉19像素；不能把这一切片称作临床“小前列腺”</td></tr>
+<tr><td>D 后期改善：case_039_week_7_slice_25</td><td>184</td><td>0.698305</td><td>0.032086→0.866279</td><td>TP 3→149，FN 181→35，同时FP 0→11</td></tr>
+<tr><td>E 后期退化：case_037_week_0_slice_17</td><td>342</td><td>0.696532</td><td>0.840532→0.649457</td><td>FP 7→155，FN 89→103；整体后期提升不保证每张都更好</td></tr>
+</table>
+
+<span style="color: purple;">A的case38/week0组共60切片，best3组pooled Dice=0.650256，是其最低阳性组；规则候选数A20、B8、C8、D178（去掉A后177）、E58。五张实际图均由Codex查看，放在忽略的outputs/selection_diagnosis_v2_20261026/，以A…E命名。上排保留整图，下排取参考和三预测并集外扩8像素显示，指标全部仍按整张原图计算；绿色TP、洋红FN、青色FP是误差类型，不是原始类别ID。没有用缩放或裁图提高指标。</span>
+
+<span style="color: purple;">这五例覆盖错误模式，不是随机样本或总体发生率估计。完整660片中254片有参考ID5、406片为空；空参考中至少出现1个FP的切片数为baseline17、best3 8、last20 23；阳性切片中完全漏掉ID5的片数为24／40／15。每片像素FPR的分母是Nvalid−R，误发现比例是FP/(TP+FP)，不能混称。该统计只描述这批验证切片，不是临床特异度。</span>
+
+<table style="color: purple;">
+<tr><th>case代理组</th><th>切片数</th><th>baseline5 pooled ID5</th><th>Improved3</th><th>Improved20</th></tr>
+<tr><td>36</td><td>60</td><td>0.898365</td><td>0.881307</td><td>0.896180</td></tr>
+<tr><td>37</td><td>60</td><td>0.756751</td><td>0.689518</td><td>0.714742</td></tr>
+<tr><td>38</td><td>60</td><td>0.596960</td><td>0.650256</td><td>0.717593</td></tr>
+<tr><td>39</td><td>480</td><td>0.822899</td><td>0.823733</td><td>0.860352</td></tr>
+</table>
+
+<span style="color: purple;">分组只由case/week文件名确定，是11个组和4个case代理，不是独立确认的患者身份／真实体积。case39占480片，像素pool会与case等权产生不同权重；诊断性的“每case先平均各week组Dice、再case等权”分别为0.768641／0.760582／0.797044，不能替代原主要pixel-pooled结果或与旧项目分数直接比较。Affine／单位并未在本组重新证明，边界坐标只用pixel，不能换算毫米。</span>
+
+### <span style="color: purple;">结论、后续规则建议及验证</span>
+
+<span style="color: purple;">原第3轮选择是CE规则的正确执行；它回答的是整集六类概率损失较低，而非ID5 Dice最高。若后续实验的主要目标明确为ID5重叠，可事先对两模型共同规定：最大验证ID5 Dice，完全并列时更低CE、再更早epoch，并分别保存ID5-best、CE-best、last。还应预先明确pixel-pooled或case等权口径，并把precision／recall、空参考误分作为次级检查。本组仅提出建议，没有重新选正式模型、改损失、增加训练或执行测试。</span>
+
+<span style="color: purple;">新增validation_diagnostics.py及6项手算检查，覆盖NLL按像素加权重构、padding排除、TP／FP／FN、各分母和双空Dice=None；完整73项检查通过、0跳过。diagnose_validation.py先保存分析规则与源码hash，再重放三份已存权重，用同一DataLoader／预处理及共享loss核对全验证结果，计算class贡献、固定集合与分组，最后按规则绘图。诊断有额外NLL／CPU统计开销，不是新的性能benchmark。</span>
+
+<span style="color: purple;">复核曾发现初稿把预测ID5整列命名为FP来源，误包含TP格。最终代码保留整列为predicted_id5_true_class_counts，另将真ID5位置置0得到FP来源，并断言两者的TP／FP总和；修正后在新v2目录完整重放，v1保留并标superseded。此为新诊断字段修复，原正式混淆矩阵／分数与权重从未被修改。</span>
+
+<span style="color: purple;">evidence/selection_diagnosis_20261026.json保存20轮历史、三模型全验证／逐类NLL／固定集合／case组汇总、候选规则与五例数值、73项检查记录和原正式证据hash；PNG只含聚合图，没有MRI。完整660片逐片统计及含MRI图留在忽略的v2输出目录。所有原正式证据、9份冻结源码、三份权重及旧仓库保持；当前第21次提交只对应实际诊断源码、检查、汇总与带紫色标记说明。仍没有测试集评估，check-off和originality状态不由自动检查改变。</span>
