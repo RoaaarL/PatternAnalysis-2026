@@ -1,6 +1,6 @@
 # HipMRI: 2D Improved U-Net versus U-Net
 
-**Student:** Nuoyan Liu (s4688861). **Course:** COMP3710. **Project difficulty:** Normal. **Report updated:** 26 October 2026.
+**Student:** Nuoyan Liu (s4688861). **Course:** COMP3710. **Project difficulty:** Normal. **Report updated:** 27 October 2026.
 
 This report compares a six-class 2D Improved U-Net with a standard U-Net baseline. The final test ID5 Dice is **0.844222 versus 0.843161**, an improvement of **0.106 percentage points**, with higher false-positive and computational costs. The evidence supports a cautious prototype comparison rather than a general recommendation to upgrade.
 
@@ -188,39 +188,97 @@ The five A-E cases and their order were fixed from the earlier diagnostic list *
 <tr><td>E: 037 / 0 / 17</td><td>342</td><td>241 / 108 / 101</td><td>282 / 220 / 60</td><td>0.697540</td><td>0.668246</td></tr>
 </table>
 
-Each figure shows the full slice above a shared display ROI. Columns show MRI, independent six-class GT, baseline prediction and ID5 errors, then Improved prediction and ID5 errors. Green is TP, magenta FN and cyan FP; these are error colours, not new class IDs. The ROI is the reference/prediction ID5 union plus an eight-pixel margin; all metrics use the full original valid region. These are qualitative contour/error comparisons, not an independent distance-based boundary metric. Physical units and base/apex anatomy remain unverified.
+ Each original six-column figure shows the full slice above a shared display ROI. Columns show MRI, independent six-class GT, baseline prediction and ID5 errors, then Improved prediction and ID5 errors. Green is TP, magenta FN and cyan FP; these are error colours, not new class IDs. The ROI is the reference/prediction ID5 union plus an eight-pixel margin; all metrics use the full original valid region. These are qualitative contour/error comparisons, not an independent distance-based boundary metric. Physical units and base/apex anatomy remain unverified.
+
+### Added offline contour diagnostics
+
+This analysis was added on 27 October 2026 using only the five original-size NPZ files saved on 26 October 2026. Each compressed-file SHA256 matches the earlier execution record; the original six-class confusion matrices and region Dice values were independently rechecked from those same arrays. This work read zero raw NIfTI files and zero checkpoints, imported no model, and performed zero model forwards, optimiser updates, training calls or test-set reads/evaluations. The ten validation forwards described above belong to the earlier 26 October execution, not this offline analysis. The new figures and numbers are bound in the <a href="evidence/boundary_review_20261027/boundary_diagnostics.json">offline diagnostic record</a>.
+
+The following custom pixel-grid contour diagnostic is defined for raw ID5. A boundary pixel is an ID5 pixel with at least one of its four edge-neighbours outside ID5; the exterior of the image is background. Compute both boundaries over all original pixels, never the display crop or artificial padding. Precision is the fraction of predicted boundary pixels with at least one reference boundary pixel in the matching window; recall reverses prediction and reference. F1 is their harmonic mean, with the empty-set conventions below. Exact matching uses the same pixel location. The 1px result uses Chebyshev distance at most one pixel, a 3-by-3 square including diagonals, not a Euclidean radius of one pixel and not a millimetre tolerance. Matching is not one-to-one: several boundary pixels may match one nearby counterpart.
+
+The added detail figures draw the binary masks as 0.5-level contours: white is the reference ID5 contour, cyan the baseline contour and orange the Improved contour; red and magenta show FP and FN regions. Those interpolated drawing lines are a different representation from the four-neighbour inner-boundary pixels counted in the table; no metric is measured from the rendered lines. Coordinates are zero-based original array rows and columns with inclusive bounds. They do not establish patient left/right, superior/inferior, base or apex. Organ names below follow the existing provider-ID preservation working assumption. Region class-confusion counts describe where labels went; they are distinct from the actual boundary-pixel matching scores.
+
+NA means undefined. With a nonempty reference and empty prediction, boundary precision is NA, recall is zero and F1 is set to zero. With an empty reference and nonempty prediction, precision is zero while recall and F1 are NA; case B therefore has no reference contour to assess. Both empty sets would give NA for all three. Each row is a post-hoc diagnostic of one of the same five selected validation examples. No mean over these cases, full-validation score or test score is calculated, and no checkpoint, threshold or model was reselected.
+
+<table>
+<tr><th>Case / model</th><th>Reference / predicted boundary pixels</th><th>Exact P / R / F1</th><th>1px P / R / F1</th></tr>
+<tr><td>A / Baseline 5</td><td>43 / 0</td><td>NA / 0.000 / 0.000</td><td>NA / 0.000 / 0.000</td></tr>
+<tr><td>A / Improved 17</td><td>43 / 27</td><td>0.148 / 0.093 / 0.114</td><td>0.481 / 0.395 / 0.434</td></tr>
+<tr><td>B / Baseline 5</td><td>0 / 53</td><td>0.000 / NA / NA</td><td>0.000 / NA / NA</td></tr>
+<tr><td>B / Improved 17</td><td>0 / 44</td><td>0.000 / NA / NA</td><td>0.000 / NA / NA</td></tr>
+<tr><td>C / Baseline 5</td><td>15 / 0</td><td>NA / 0.000 / 0.000</td><td>NA / 0.000 / 0.000</td></tr>
+<tr><td>C / Improved 17</td><td>15 / 0</td><td>NA / 0.000 / 0.000</td><td>NA / 0.000 / 0.000</td></tr>
+<tr><td>D / Baseline 5</td><td>47 / 36</td><td>0.333 / 0.255 / 0.289</td><td>0.556 / 0.426 / 0.482</td></tr>
+<tr><td>D / Improved 17</td><td>47 / 40</td><td>0.450 / 0.383 / 0.414</td><td>0.825 / 0.830 / 0.827</td></tr>
+<tr><td>E / Baseline 5</td><td>63 / 65</td><td>0.123 / 0.127 / 0.125</td><td>0.292 / 0.397 / 0.337</td></tr>
+<tr><td>E / Improved 17</td><td>63 / 74</td><td>0.081 / 0.095 / 0.088</td><td>0.311 / 0.429 / 0.360</td></tr>
+</table>
+
+The one-pixel tolerance is particularly forgiving for tiny regions: as a constructed arithmetic counterexample, a 3-by-3 reference square and a single central predicted pixel have contour F1 at 1px equal to 1, yet region Dice is only 0.2. This is a numeric warning, not an MRI result. Retain both exact/tolerant contour scores and the unchanged region metrics rather than selecting the most favourable number.
 
 ### A. Missed reference region: case 038, week 0, slice 29
 
-Improved recovers 58 of 160 reference pixels without FP, but still misses 102. A nonzero Dice does not make the contour acceptable for autonomous use; inspect the remaining region and neighbouring slices.
+The reference ID5 region spans rows 117-133 and columns 31-41. Baseline predicts no ID5 contour. Improved recovers 58 pixels entirely within the reference, but its extent is only rows 123-130 and columns 31-40. The smaller- and larger-row ends remain truncated, with a small local missed patch/indentation near the recovered contour. It has no FP, yet misses 102 of the 160 reference pixels.
+
+The reference ID5 boundary adjoins IDs 1 and 3. Improved assigns 90 missed pixels to ID1 (Body) and 12 to ID3 (Bladder). Its exact contour P/R/F1 are 0.148/0.093/0.114; with the defined 1px window they are 0.481/0.395/0.434. The wider-window matches do not recover the missing target region. A reviewer should redraw the truncated extent against the reference and inspect the local ID5/ID3 interface before accepting a draft; this example does not establish base/apex anatomy.
 
 ![Validation A: complete MRI, GT, baseline-5 and Improved-17 predictions and error panels](evidence/final_validation_display_20261026/A_final_validation_epoch5_17.png)
 
+Added boundary detail for case A, generated from the unchanged saved validation arrays; no new inference. The two models use the same display ROI, while all numbers use the full original image.
+
+![Added offline boundary detail for validation case A: reference and frozen-model contours from the same saved arrays](evidence/boundary_review_20261027/A_boundary_detail.png)
+
 ### B. False positives with empty reference: case 039, week 5, slice 41
 
-The annotation contains no ID5 pixels. Improved reduces FP from 269 to 175 but both predictions remain incorrect and score zero. An empty 2D reference does not independently establish anatomical absence.
+This reference-empty slice has no ID5 contour. Baseline nevertheless produces a connected 269-pixel ID5 region at rows 115-135, columns 67-83: 245 FP pixels overwrite reference ID1 (Body) and 24 overwrite reference ID4 (Rectum). Improved produces a connected 175-pixel region at rows 119-134, columns 62-76, entirely over reference ID1. Fewer FP and the absence of ID4 overlap in Improved do not make its nonempty draft correct.
+
+Boundary recall and F1 are NA because there is no reference contour to match; boundary precision is zero for both. This is a spurious-region failure rather than a measured displacement of an existing reference contour. Automatic acceptance should be withheld while a reviewer checks the false draft against the annotation and local anatomy. An empty annotation does not by itself prove anatomical absence, and the array-coordinate shift is not a patient-direction claim.
 
 ![Validation B: empty ID5 reference and residual false positives](evidence/final_validation_display_20261026/B_final_validation_epoch5_17.png)
 
+Added boundary detail for case B, generated from the unchanged saved validation arrays; no new inference. The two models use the same display ROI, while all numbers use the full original image.
+
+![Added offline boundary detail for validation case B: reference and frozen-model contours from the same saved arrays](evidence/boundary_review_20261027/B_boundary_detail.png)
+
 ### C. Very small reference region: case 037, week 0, slice 9
 
-Both models miss all 19 reference pixels. This illustrates a small annotated region in pixel space; it does not establish a clinically small prostate or a verified apex/base location.
+The 19-pixel reference ID5 region lies at rows 112-119, columns 74-76, with 15 four-neighbour inner-boundary pixels. Its annotated boundary adjoins ID3 (Bladder under the working mapping). Both models assign all 19 reference pixels to ID3 and predict no ID5 region, so the reference ID5/ID3 interface disappears entirely from the draft. Exact and 1px boundary recall/F1 are zero; precision is NA because no predicted boundary exists.
+
+A reviewer must inspect and reconstruct the small target region rather than treating the smooth surrounding ID3 prediction as an acceptable target contour. Small area alone does not identify a clinically small prostate or an apex/base slice. The tolerance counterexample above also explains why a permissive contour score would not be sufficient evidence of reliable small-region delineation.
 
 ![Validation C: both models miss the nineteen-pixel reference region](evidence/final_validation_display_20261026/C_final_validation_epoch5_17.png)
 
+Added boundary detail for case C, generated from the unchanged saved validation arrays; no new inference. The two models use the same display ROI, while all numbers use the full original image.
+
+![Added offline boundary detail for validation case C: reference and frozen-model contours from the same saved arrays](evidence/boundary_review_20261027/C_boundary_detail.png)
+
 ### D. Improved overlap: case 039, week 7, slice 25
 
-Improved reduces FN from 81 to 31 while adding one FP, raising Dice from 0.698305 to 0.884393. This selected example demonstrates a local benefit, not an estimated frequency of improvement.
+The reference ID5 region spans rows 123-136 and columns 64-77, and its annotated boundary adjoins ID1 (Body). Improved raises TP from 103 to 153 and reduces FN from 81 to 31 while FP changes from 8 to 9. A 26-pixel missed region remains on the larger-column side at rows 123-136, columns 74-77; the other five FN are at rows 134-136, columns 64-68. All 31 missed pixels are assigned to ID1.
+
+Improved also extends slightly beyond the reference: seven of its nine FP lie at rows 136-137, columns 70-73, with two further isolated FP pixels. These are local contour errors; the complete predicted ID5 region is still connected. Exact contour F1 improves from 0.289 to 0.414 and the 1px F1 from 0.482 to 0.827. A reviewer should restore the remaining larger-column edge and trim the small row-edge excess. The comparison supports local improvement on this chosen example, not a general frequency or a verified anatomical-direction claim.
 
 ![Validation D: increased true overlap and reduced missed region](evidence/final_validation_display_20261026/D_final_validation_epoch5_17.png)
 
+Added boundary detail for case D, generated from the unchanged saved validation arrays; no new inference. The two models use the same display ROI, while all numbers use the full original image.
+
+![Added offline boundary detail for validation case D: reference and frozen-model contours from the same saved arrays](evidence/boundary_review_20261027/D_boundary_detail.png)
+
 ### E. Over-segmentation cost: case 037, week 0, slice 17
 
-Improved reduces FN from 101 to 60 but increases FP from 108 to 220, lowering Dice. Higher recall alone is not sufficient. Review the expanded contour before accepting it.
+The reference spans rows 110-134 and columns 62-79, with interfaces against reference IDs 1 and 3. Improved extends to column 50 although the reference starts at column 62. Its 220 FP are concentrated on the smaller-column side at rows 111-135, columns 50-66: 218 come from reference ID1 (Body) and two from ID3 (Bladder). On the other side, 60 reference ID5 pixels remain missed, all assigned to ID3. This combines an outward protrusion into the reference ID1 region with a residual loss of the ID5/ID3 interface.
+
+The metric conclusions are mixed: exact contour F1 falls from 0.125 to 0.088, while 1px F1 rises slightly from 0.337 to 0.360. Region Dice falls from 0.698 to 0.668 and FP more than doubles from 108 to 220. Selecting only the tolerant F1 would conceal the larger over-segmentation cost. A reviewer should trim the smaller-column protrusion and inspect/redraw the still-missed ID5/ID3 interface before accepting a draft; the increased TP alone is insufficient.
 
 ![Validation E: reduced misses accompanied by substantial additional false positives](evidence/final_validation_display_20261026/E_final_validation_epoch5_17.png)
 
+Added boundary detail for case E, generated from the unchanged saved validation arrays; no new inference. The two models use the same display ROI, while all numbers use the full original image.
+
+![Added offline boundary detail for validation case E: reference and frozen-model contours from the same saved arrays](evidence/boundary_review_20261027/E_boundary_detail.png)
+
 These preselected examples are not random samples, failure rates, independent-patient statistics or a replacement for complete-split B4 scoring. In case E, the B1 baseline has 108 FP whereas the earlier B4 diagnostic has 109; checkpoint/input bytes were unchanged. Batch shape/composition and floating-point effects were not isolated, so no specific cause is claimed and the original B4 score is retained.
+
+Coverage remains limited: every nonempty complete ID5 prediction in these five final-model cases has one four-connected and one eight-connected component. Small disconnected FP or FN error regions are not independent predicted organs. These selected examples therefore do not establish a disconnected-prediction failure mode. No physical units, independent patient identity, anatomical base/apex position or adjacent-slice prediction continuity were verified. The contour diagnostics strengthen this local pixel-space comparison but do not establish clinical boundary safety or resolve those unmeasured anatomical questions.
 
 The [earlier selection diagnosis](evidence/selection_diagnosis_20261026.json) and linked [historical report](FINAL_REPORT.md) preserve baseline-5/Improved-3/Improved-20 examples and their fixed selection rules. Those historical figures are neither final Improved-17 predictions nor test failures. The later final-model display evidence is separate from the original 19-source report summary.
 
@@ -282,6 +340,8 @@ The standard-library [report collector](collect_final_report_evidence.py) reads 
 **Student participation.** Recorded student contributions include learning responses about filename pairing, unchanged mask IDs, normalisation, valid versus padded pixels, tensor/batch dimensions, gradients and metrics; project/protocol and label-assumption decisions; and explicit training, test and Improved-only recovery authorisations. These responses and approvals are distinct from personally executing every check, auditing all data or demonstrating complete understanding of every submitted line.
 
 **Verification and limitations.** Codex used constructed checks, smoke/full runs, checkpoint/state comparisons, saved-matrix/timing arithmetic, source hashes, image inspection and independent read-only reviews. Their scope and failures are preserved in the logs/JSON. Later work added 11 constructed CPU display checks, ten final-model validation forwards and 12 standard-library source-evolution checks. Automated validation does not prove student understanding or satisfy an originality judgement by itself. The historical implementation/test exposure, derivative-label assumption, logging failure and separately authorised repeated test exposure are disclosed rather than removed.
+
+For the 27 October boundary supplement, Codex independently re-read only the five previously saved NPZ files, checked their recorded digests and existing matrices, computed the declared pixel-grid contour diagnostics, and drew additional contour comparisons. Fourteen constructed array-arithmetic checks support this custom diagnostic; they are not model or test-set evaluations. This supplement made zero raw NIfTI or checkpoint reads and zero model imports/forwards, training calls, test-set reads or optimiser updates. These automated checks and interpretations are not presented as independent student execution or as confirmation of anatomical base/apex labels.
 
 **Responsibility.** The student remains responsible for reviewing, understanding and explaining the submitted code, formulae and claims, and for accurate attribution. AI assistance being permitted does not transfer that responsibility or guarantee a mark/pass.
 
